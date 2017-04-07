@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "---\ntitle: \"Vignette Title\"\nauthor: \"Vignette Author\"\ndate: \"`r Sys.Date()`\"\noutput: rmarkdown::html_vignette\nvignette: >\n  %\\VignetteIndexEntry{Vignette Title}\n  %\\VignetteEngine{knitr::rmarkdown}\n  %\\VignetteEncoding{UTF-8}\n---\n\n```{r dependencies}\nlibrary(UpdateAnno) # Get orig btm data\nBiocInstaller::biocLite(\"org.Hs.eq.db\", suppressUpdates = TRUE) # Get latest version of official gene symbols\nlibrary(org.Hs.eg.db)\nlibrary(GSEABase)\nlibrary(data.table)\n```\n\nRead in original GMT file \n```{r orig-gmt}\n# path2gmt <- \"/home/ehenrich/R/HIPCGeneModuleAnalysis/data/BTM_for_GSEA_20131008.gmt\"\n# btm <- getGmt(path2gmt)\n# btm_list <- geneIds(btm)\ndt_btm <- rbindlist(lapply(orig_btm_list, data.table), idcol = \"module\") # change to data.table\nsetnames(dt_btm, \"V1\", \"ALIAS\")\n```\n\n\nUpdate the current GMT list object with latest official ALIAS2SYMBOL mappings\n```{r update-gmt}\nstd <- data.table(select(org.Hs.eg.db, \n                         keys = keys(org.Hs.eg.db, keytype = \"SYMBOL\"), \n                         columns = c(\"ALIAS\", \"SYMBOL\"), \n                         keytype = \"SYMBOL\"))\ndt_btm[std, SYMBOL := SYMBOL, on = c(ALIAS = \"ALIAS\")]\ndt2 <- data.frame(pathway = dt_btm$module, SYMBOL = dt_btm$SYMBOL, stringsAsFactors = F)\ndt2 <- dt2[ !is.na(dt2$SYMBOL), ]\ndt2 <- unique(dt2) # MUST DE-DUPE so that gmt file can be created, checked by GeneSet()\n```\n\n\nRecreate gmt file\n```{r remake-gmt-file}\ndt2_lol <- plyr::dlply(dt2, 1, function(x){ x$SYMBOL }) # convert to list of lists\nnewbtm <- lapply(names(dt2_lol), function(x){\n  GeneSet(setName = x, geneIds = dt2_lol[[x]])\n})\ngsc <- GeneSetCollection(newbtm)\npath2newgmt <- \"./updated_bmt.gmt\"\ntoGmt(gsc, path2newgmt)\n```\n\n```{r update-btm-data}\nupdated_btm_list <- dt2_lol\nupdated_btm_df <- dt2\ndevtools::use_data(updated_btm_list, overwrite = TRUE)\ndevtools::use_data(updated_btm_df, overwrite = TRUE)\n```\n",
+    "created" : 1491594890762.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3528117376",
+    "id" : "8886556",
+    "lastKnownWriteTime" : 1491603135,
+    "last_content_update" : 1491603135315,
+    "path" : "~/R/UpdateAnno/vignettes/updateAnnoGMT.Rmd",
+    "project_path" : "vignettes/updateAnnoGMT.Rmd",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

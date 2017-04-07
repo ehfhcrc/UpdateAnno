@@ -1,0 +1,3 @@
+"0","dt2 <- data.frame(pathway = dt_btm$module, SYMBOL = dt_btm$SYMBOL, stringsAsFactors = F)"
+"0","dt2 <- dt2[ !is.na(dt2$SYMBOL), ]"
+"0","dt2 <- unique(dt2) # MUST DE-DUPE so that gmt file can be created, checked by GeneSet()"

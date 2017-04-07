@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "Package: UpdateAnno\nType: Package\nTitle: Update Annotation to Latest Symbols using org.Hs.eq.db\nVersion: 0.1.0\nAuthor: Evan Henrich\nMaintainer: Evan Henrich <ehenrich@fredhutch.org>\nDescription: Starting with the original list of gene sets from 2013,\n    called \"orig_btm\" in the package's data objects, the vignette \n    automatically re-installs org.Hs.eq.db and updates the other data\n    object - \"updated_btm\". This gives other scripts easy access to \n    the latest gene symbols every time the package is re-installed.\nLicense: What license is it under?\nEncoding: UTF-8\nLazyData: true\nSuggests: knitr,\n    rmarkdown\nImports: plyr,\n    data.table,\n    devtools\nVignetteBuilder: knitr\nRoxygenNote: 6.0.1\n",
+    "created" : 1491602117364.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3716261809",
+    "id" : "DB165582",
+    "lastKnownWriteTime" : 1491602989,
+    "last_content_update" : 1491602989,
+    "path" : "~/R/UpdateAnno/DESCRIPTION",
+    "project_path" : "DESCRIPTION",
+    "properties" : {
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "dcf"
+}

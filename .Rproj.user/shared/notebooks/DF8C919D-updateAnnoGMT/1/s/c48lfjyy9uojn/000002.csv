@@ -1,0 +1,7 @@
+"0","dt2_lol <- dlply(dt2, 1, function(x){ x$SYMBOL }) # convert to list of lists"
+"0","newbtm <- lapply(names(dt2_lol), function(x){"
+"0","  GeneSet(setName = x, geneIds = dt2_lol[[x]])"
+"0","})"
+"0","gsc <- GeneSetCollection(newbtm)"
+"0","path2newgmt <- ""/home/ehenrich/R/UpdateAnno/mynew.gmt"""
+"0","toGmt(gsc, path2newgmt)"

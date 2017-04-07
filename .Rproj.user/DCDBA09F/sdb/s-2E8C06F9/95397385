@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "#' Function to update annotation of a character vector of gene aliases\n#'\n#' @param vec character vector of gene aliases\n#' @import data.table\n#' @export\n#'\n\n# Main Method\nupdateAnno <- function(vec){\n  vec_dt <- data.table(vec)\n  setnames(vec_dt, \"vec\", \"ALIAS\")\n  std <- data.table(select(org.Hs.eg.db,\n                           keys = keys(org.Hs.eg.db, keytype = \"SYMBOL\"),\n                           columns = c(\"ALIAS\", \"SYMBOL\"),\n                           keytype = \"SYMBOL\"))\n  vec_dt[std, SYMBOL := SYMBOL, on = c(ALIAS = \"ALIAS\")]\n  return(vec_dt$SYMBOL)\n}\n",
+    "created" : 1491603361180.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1971536752",
+    "id" : "95397385",
+    "lastKnownWriteTime" : 1491605844,
+    "last_content_update" : 1491605844433,
+    "path" : "~/R/UpdateAnno/R/UpdateAnnoVec.R",
+    "project_path" : "R/UpdateAnnoVec.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
