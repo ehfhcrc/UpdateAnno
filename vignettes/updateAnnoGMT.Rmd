@@ -8,7 +8,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
+Dependencies
 ```{r dependencies}
 library(UpdateAnno) # Get orig btm data
 source("https://bioconductor.org/biocLite.R")
@@ -19,14 +19,13 @@ library(GSEABase)
 library(data.table)
 ```
 
-Read in original GMT file 
+Read in original GMT data from within library
 ```{r orig-gmt}
 dt_btm <- rbindlist(lapply(orig_btm_list, data.table), idcol = "module") # change to data.table
 setnames(dt_btm, "V1", "ALIAS")
 ```
 
-
-Update the current GMT list object with latest official ALIAS2SYMBOL mappings
+remap the current GMT list object with latest official ALIAS2SYMBOL from org.Hs.eq.db
 ```{r update-gmt}
 std <- data.table(select(org.Hs.eg.db, 
                          keys = keys(org.Hs.eg.db, keytype = "SYMBOL"), 
@@ -38,8 +37,7 @@ dt2 <- dt2[ !is.na(dt2$SYMBOL), ]
 dt2 <- unique(dt2) # MUST DE-DUPE so that gmt file can be created, checked by GeneSet()
 ```
 
-
-Recreate gmt file
+update the data objects held in the library
 ```{r update-btm-data}
 updated_btm_list <- plyr::dlply(dt2, 1, function(x){ x$SYMBOL }) # convert to list of lists
 updated_btm_df <- dt2
