@@ -1,5 +1,0 @@
-"0","path2gmt <- ""/home/ehenrich/R/HIPCGeneModuleAnalysis/data/BTM_for_GSEA_20131008.gmt"""
-"0","btm <- getGmt(path2gmt)"
-"0","btm_list <- geneIds(btm)"
-"0","dt_btm <- rbindlist(lapply(btm_list, data.table), idcol = ""module"") # change to data.table"
-"0","setnames(dt_btm, ""V1"", ""ALIAS"")"

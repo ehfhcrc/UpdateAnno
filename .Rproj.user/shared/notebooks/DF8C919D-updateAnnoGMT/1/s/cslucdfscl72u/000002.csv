@@ -1,7 +1,0 @@
-"0","std <- data.table(select(org.Hs.eg.db, "
-"0","                         keys = keys(org.Hs.eg.db, keytype = ""SYMBOL""), "
-"0","                         columns = c(""ALIAS"", ""SYMBOL""), "
-"0","                         keytype = ""SYMBOL""))"
-"2","'select()' returned 1:many mapping between keys and columns
-"
-"0","dt_btm[std, SYMBOL := SYMBOL, on = c(ALIAS = ""ALIAS"")]"
