@@ -8,7 +8,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-Dependencies
+
 ```{r dependencies}
 library(UpdateAnno) # Get orig btm data
 source("https://bioconductor.org/biocLite.R")
@@ -19,28 +19,60 @@ library(GSEABase)
 library(data.table)
 ```
 
-Read in original GMT data from within library
-```{r orig-gmt}
-dt_btm <- rbindlist(lapply(orig_btm_list, data.table), idcol = "module") # change to data.table
-setnames(dt_btm, "V1", "ALIAS")
-```
+```{r setup-names}
+origMods <- c("orig_btm_list",
+              "orig_chaussabel",
+              "orig_emory",
+              "orig_msigdb")
 
-remap the current GMT list object with latest official ALIAS2SYMBOL from org.Hs.eq.db
-```{r update-gmt}
+names(origMods) <- c("updated_btm_list",
+                     "chaussabel_modules",
+                     "emory_blood_transcript_modules",
+                     "msigdb_immunologic_signatures")
+
 std <- data.table(select(org.Hs.eg.db, 
                          keys = keys(org.Hs.eg.db, keytype = "SYMBOL"), 
                          columns = c("ALIAS", "SYMBOL"), 
                          keytype = "SYMBOL"))
-dt_btm[std, SYMBOL := SYMBOL, on = c(ALIAS = "ALIAS")]
-dt2 <- data.frame(pathway = dt_btm$module, SYMBOL = dt_btm$SYMBOL, stringsAsFactors = F)
-dt2 <- dt2[ !is.na(dt2$SYMBOL), ]
-dt2 <- unique(dt2) # MUST DE-DUPE so that gmt file can be created, checked by GeneSet()
 ```
 
-update the data objects held in the library
-```{r update-btm-data}
-updated_btm_list <- plyr::dlply(dt2, 1, function(x){ x$SYMBOL }) # convert to list of lists
-updated_btm_df <- dt2
-devtools::use_data(updated_btm_list, overwrite = TRUE)
-devtools::use_data(updated_btm_df, overwrite = TRUE)
+```{r helper-fn}
+updateMod <- function(module, std){
+  
+  # read in as DT
+  modList <- get(module)
+  modDT <- rbindlist(lapply(modList, data.table), idcol = "module")
+  setnames(modDT, "V1", "ALIAS")
+  
+  # update gene symbols
+  modDT[std, SYMBOL := SYMBOL, on = c(ALIAS = "ALIAS")]
+  dt2 <- data.frame(pathway = modDT$module, SYMBOL = modDT$SYMBOL, stringsAsFactors = F)
+  dt2 <- dt2[ !is.na(dt2$SYMBOL), ]
+  dt2 <- unique(dt2) # MUST DE-DUPE so that gmt file can be created, checked by GeneSet()
+  
+  # save with correct name
+  upMod <- plyr::dlply(dt2, 1, function(x){ x$SYMBOL }) # convert to list of lists
+  
+  # if the official btm then save the df as well
+  # use_data doesn't interpret the object name
+  if(module == "orig_btm_list"){
+    updated_btm_list <- upMod
+    devtools::use_data(updated_btm_list, overwrite = TRUE)
+    updated_btm_df <- dt2
+    devtools::use_data(updated_btm_df, overwrite = TRUE)
+  }else if( module == "orig_chaussabel"){
+    chaussabel_modules <- upMod
+    devtools::use_data(chaussabel_modules, overwrite = TRUE)
+  }else if( module == "orig_emory"){
+    emory_blood_transcript_modules <- upMod
+    devtools::use_data(emory_blood_transcript_modules, overwrite = TRUE)
+  }else if( module == "orig_msigdb"){
+    msigdb_immunologic_signatures <- upMod
+    devtools::use_data(msigdb_immunologic_signatures, overwrite = TRUE)
+  }
+}
+```
+
+```{r update-modules}
+lapply(origMods, updateMod, std = std)
 ```
