@@ -5,118 +5,161 @@
 
 # HOW-TO:
 # 1. ssh rsT or rsP
-# 2. s (to become su)
+# 2. become ImmuneSpace user (able to rename files AND access LK with auth)
 # 3. R (to open up R)
 # 4. devtools::install_github("ehfhcrc/UpdateAnno", build_vignette = T)
 #    This ensures that the latest symbols are loaded into the data in the library by the vignette.
 # 5. library(UpdateAnno)
-# 5. runUpdateAnno()
+# 6. runUpdateAnno(baseUrl = "https://test.immunespace.org" )
 
 # FOR TESTING ONLY:
 # Dependencies --------------------------------------------------------
-library(UpdateAnno)
-library(data.table)
-library(Rlabkey)
-library(org.Hs.eg.db)
-library(ImmuneSpaceR)
+# library(UpdateAnno)
+# library(data.table)
+# library(Rlabkey)
+# library(org.Hs.eg.db)
+# library(ImmuneSpaceR)
+# library(limma)
+# library(Biobase)
+# library(gtools)
 
 # NOTE: Main Script @ bottom of page
+#' @import Rlabkey
+#' @import org.Hs.eg.db
+#' @import ImmuneSpaceR
+#' @import limma
+#' @import Biobase
+#' @import gtools
 
 #######################################################################
 ###        1. Update Microarray.FeatureAnnotation table             ###
 #######################################################################
-# NOTES: This will take care of GeneExpressionExplore Module, which uses
+# NOTES: This will take care of GeneExpressionExplorer Module, which uses
 # the Microarray.FeatureAnnotation table to populate a dropdown for selection
 # of genes of interest.
 
-# https://github.com/RGLab/LabKeyModules/blob/master/GeneExpressionExplorer/web/GeneExpressionExplorer.js#L233
+updateFAS <- function(baseUrl){
 
-updateFAS <- function(){
-  currAnno <- data.table(labkey.selectRows(baseUrl = baseUrl,
-                                           folderPath = "/Studies/",
-                                           schemaName = "Microarray",
-                                           queryName = "FeatureAnnotation",
-                                           colNameOpt = "fieldname",
-                                           showHidden = TRUE ))
+  # helper fn-----------------------------------------------
+  getAnno <- function(nm, currFAS, baseUrl){
+    annoSetId <- currFAS$RowId[ currFAS$Name == nm ]
+    fasQuery <- sprintf("SELECT * from FeatureAnnotation
+                          where FeatureAnnotationSetId='%s';",
+                        annoSetId)
+    features <- labkey.executeSql(baseUrl = baseUrl,
+                                  folderPath = "/Studies/",
+                                  schemaName = "Microarray",
+                                  sql = fasQuery,
+                                  colNameOpt = "fieldname",
+                                  showHidden = T)
+    toDrop <- c("Created", "CreatedBy", "Modified", "ModifiedBy")
+    features <- features[ , !(colnames(features) %in% toDrop) ]
+  }
 
-  currAnno$GeneId <- updateAnno(currAnno$GeneSymbol) # uses org.Hs.eq.db under-the-hood
+  currFas <- function(baseUrl){
+    res <- data.table(labkey.selectRows(baseUrl = baseUrl,
+                                        folderPath = "/Studies/",
+                                        schemaName = "Microarray",
+                                        queryName = "FeatureAnnotationSet",
+                                        colNameOpt = "fieldname",
+                                        showHidden = TRUE ))
+  }
 
-  # toUpdate <- ????
 
-  # Ideally, push new gs back up to microarray.FeatureAnnotation so it's there!
-  # updatedAnno <- labkey.updateRows(baseUrl = baseUrl,
-  #                                  folderPath = "/Studies/",
-  #                                  schemaName = "Microarray",
-  #                                  queryName = "FeatureAnnotation",
-  #                                  toUpdate = toUpdate)
+  # MAIN ------------------------------------------------------------
+  # for each name in fas (that does not have "_update"), see if there is an updated version
+  currFAS <- currFas(baseUrl)
+  fasNms <- currFAS$Name[ !("_updated" %in% currFAS$Name) ]
+  lapply(fasNms, FUN = function(nm){
+    upNm <- paste0(nm, "_updated")
+    updated <- upNm %in% currFAS$Name
+    currNm <- ifelse( updated, upNm, nm )
+    features <- getAnno(currNm, currFAS, baseUrl)
+    features$GeneSymbol <- updateAnno(features$GeneSymbol)
+    if( updated ){
+      done <- labkey.updateRows(baseUrl = baseUrl,
+                                folderPath = "/Studies/",
+                                schemaName = "Microarray",
+                                queryName = "FeatureAnnotation",
+                                toUpdate = features)
+    }else{
+      # Create new featureAnnotationSet with "_updated" name
+      toImport <- data.frame(currFAS[ currFAS$Name == nm, ])
+      toImport <- toImport[ , !(colnames(toImport) == "RowId") ]
+      toImport$Name <- paste0(toImport$Name, "_updated")
+      addFas <- labkey.importRows(baseUrl = baseUrl,
+                                  folderPath = "/Studies/",
+                                  schemaName = "Microarray",
+                                  queryName = "FeatureAnnotationSet",
+                                  toImport = toImport)
+
+      # check that new set has been imported correctly
+      nowFas <- currFas(baseUrl)
+      if( !(toImport$Name[[1]] %in% nowFas$Name) ){
+        stop("Updated FAS (",toImport$Name[[1]],") not imported correctly")
+      }
+
+      # Prep for importRows by removing rowIds (will be given) and using new FASid
+      features <- features[ , !(colnames(features) == "RowId") ]
+      features$FeatureAnnotationSetId <- nowFas$RowId[ nowFas$Name == toImport$Name[[1]] ]
+      features[ is.na(features) ] <- ""
+      features <- data.frame(features, stringsAsFactors = F)
+      addFeatures <- labkey.importRows(baseUrl = baseUrl,
+                                  folderPath = "/Studies/",
+                                  schemaName = "Microarray",
+                                  queryName = "FeatureAnnotation",
+                                  toImport = features)
+    }
+  })
 }
 
 #######################################################################
 ###            2. Update the expression matrices                    ###
 #######################################################################
-# allDirs <- list.dirs(path = "testEMs") # local on EH machine
 
-updateEMs <- function(){
-  # get list of study folders
-  allDirs <- list.dirs(path = "/share/files/Studies/") # on rsT / rsP
-  emDirs <- allDirs[ grep("*exprs_matrices", allDirs) ]
+updateEMs <- function(sdy){
+  # get file basenames
+  dirPath <- file.path("/share/files/Studies",
+                       sdy,
+                       "@files/analysis/exprs_matrices")
+  fls <- list.files(dirPath)
+  tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
+  baseNms <- tmp[ !(tmp %in% c(".summary",".orig",".summary.orig")) ]
 
-  # Get list of matrices
-  runsDF <- labkey.selectRows(baseUrl = baseUrl,
-                              folderPath = "/Studies/",
-                              schemaName = "assay.ExpressionMatrix.matrix",
-                              queryName = "Runs",
-                              colNameOpt = "rname")
+  # go through each baseNm to update summary tsv
+  sapply(baseNms, function(nm){
+    baseFls <- fls[ grep(nm, fls) ]
 
-  # for each folder
-  dmp <- lapply(emDirs, function(dir){
-    fls <- list.files(dir)
-
-    # get file basenames
-    if( length(fls) > 0 ){
-      tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
-      baseNms <- tmp[ !(tmp %in% c(".summary",".orig",".summary.orig")) ]
-
-      # go through each baseNm to update probe level and summary tsv
-      sapply(baseNms, function(nm){
-        baseFls <- fls[ grep(nm, fls) ]
-
-        # Make tsv.orig if necessary (first time only)
-        if( length(grep("*.orig", baseFls)) == 0){
-          dmp <- sapply(baseFls, function(fl){ file.rename(file.path(dir,fl),
-                                                           file.path(dir, paste0(fl, ".orig"))) })
-        }
-
-        # get probe-level original df and update annotation using only features for FASid
-        # Reason for limiting to FASid and therefore needing executeSql instead of SelectRows
-        # is that original FAS entries may have same probes mapped to different genes based
-        # on changes in bioconductor libraries over time.  executeSql is only way to get FASid
-        # because it is a lookup.
-        prbEM <- fread(file.path(dir, paste0(nm, ".tsv.orig")))
-        annoSetId <- runsDF$featureset[ runsDF$name == nm ]
-        sqlStr <- sprintf("SELECT FeatureAnnotationSetId, FeatureId, GeneSymbol
-                        from FeatureAnnotation
-                        where FeatureAnnotationSetId='%s';", annoSetId)
-        features <- labkey.executeSql(baseUrl = baseUrl,
-                                      folderPath = "/Studies/",
-                                      schemaName = "Microarray",
-                                      sql = sqlStr,
-                                      colNameOpt = "fieldname")
-        prbEM <- prbEM[features, gene_symbol := GeneSymbol, on = c(V1 = "FeatureId")]
-
-        # NOT taking NAs out here - does happen in summary process though
-        write.table(prbEM, file = paste0(dir, "/", nm, ".tsv"), sep = "\t")
-
-        # Summarize - lifted from Create-Matrix.R
-        em <- prbEM[!is.na(gene_symbol) & gene_symbol != "NA"]
-        sumEM <- em[ , lapply(.SD, mean), by="gene_symbol", .SDcols = grep("^BS", colnames(em)) ]
-
-        write.table(sumEM, file = paste0(dir, "/", nm, ".tsv.summary"), sep = "\t")
-      })
+    # Rename original summary file to tsv.summary.orig if necessary (first time only)
+    if( !(paste0(nm, ".tsv.summary.orig") %in% baseFls) ){
+      sumFl <- paste0(dirPath, "/", nm, ".tsv.summary")
+      file.rename( sumFl, paste0(sumFl, ".orig") )
     }
+
+    # get probe-level original df and update annotation using only features for FASid
+    # Reason for limiting to FASid and therefore needing executeSql instead of SelectRows
+    # is that original FAS entries may have same probes mapped to different genes based
+    # on changes in bioconductor libraries over time.  ExecuteSql is only way to get FASid
+    # because it is a lookup even though it is in microarray.FeatureAnnotation.
+    prbEM <- fread(file.path(dirPath, paste0(nm, ".tsv")))
+    annoSetId <- runsDF$featureset[ runsDF$name == nm ]
+    sqlStr <- sprintf("SELECT FeatureAnnotationSetId, FeatureId, GeneSymbol
+                    from FeatureAnnotation
+                    where FeatureAnnotationSetId='%s';", annoSetId)
+    features <- labkey.executeSql(baseUrl = baseUrl,
+                                  folderPath = "/Studies/",
+                                  schemaName = "Microarray",
+                                  sql = sqlStr,
+                                  colNameOpt = "fieldname")
+    prbEM <- prbEM[features, gene_symbol := GeneSymbol, on = c(V1 = "FeatureId")]
+
+    # Summarize - lifted from Create-Matrix.R
+    em <- prbEM[ !is.na(gene_symbol) & gene_symbol != "NA" ]
+    sumEM <- em[ , lapply(.SD, mean), by="gene_symbol", .SDcols = grep("^BS", colnames(em)) ]
+
+    write.table(sumEM, file = paste0(dirPath, "/", nm, ".tsv.summary"), sep = "\t")
   })
 }
-
 
 #######################################################################
 ###            3. Update DGEA-Results                               ###
@@ -133,147 +176,127 @@ updateEMs <- function(){
   # https://github.com/RGLab/LabKeyModules/blob/master/DifferentialExpressionAnalysis/reports/schemas/assay.ExpressionMatrix.matrix/Runs/DifferentialExpressionAnalysis.Rmd
     # labkey.deleteRows()??
 
-  # Not clear how the Rmd is run, but could loop over the code here to import new rows
+updateGEAR <- function(sdy, baseUrl, runsDF){
 
-# library(Rlabkey)
-# library(ImmuneSpaceR)
-# library(limma)
-# library(Biobase)
-# library(data.table)
-# library(gtools)
-#
-# contrast <- c("study_time_collected", "study_time_collected_unit")
-# study <- basename(labkey.url.path)
-# i <- 1 #analysis accession key
-# infostring <- ""
-#
-# Differential expression analysis
-#
-# Returns genes differentially expressed with an FDR of less than 20%, or top 100 lowest FDR.
-#
-# study: r study
-# contrast: r contrast
-#
-# con <- CreateConnection(study)
-# con$GeneExpressionInputs()
-# getAllCoefs <- function(con){
-#   runs <- con$data_cache$GE_matrices$name
-#   if(is.null(runs)){
-#     stop("This study does not have gene-expression data")
-#   }
-#   coefs <- con$data_cache$GE_inputs
-#   coefs <- unique(coefs[, c("arm_name", contrast), with = FALSE])
-#   coefs <- coefs[study_time_collected > 0]
-#   return(coefs)
-# }
-#
-#
-# if(is.null(con$data_cache[["GE_matrices"]])){
-#   nCoefs <- -1
-#   infostring <- "There is no HIPCMatrix run in this study"
-# } else{
-#   runs <- con$data_cache$GE_matrices[, list(cohort, name)]
-#   setnames(runs, "cohort", "arm_name")
-#   allCoefs <- getAllCoefs(con)
-#   allCoefs[, coefficient := do.call(paste, .SD), .SDcols = contrast]
-#   existGEA <- data.table(labkey.selectRows(labkey.url.base, labkey.url.path, "gene_expression",
-#                                            "gene_expression_analysis", colNameOpt = "rname"))
-#   if(nrow(existGEA) > 0){
-#     q1 <- quote(arm_name)
-#     q2 <- quote(coefficient)
-#     existGEA[, key := paste0(eval(q1), eval(q2))]
-#     allCoefs <- allCoefs[, key := paste0(eval(q1), eval(q2))]
-#     allCoefs <- allCoefs[!key %in% existGEA$key]
-#     arm_todo <- unique(allCoefs$arm_name)
-#     i <- max(as.numeric(gsub("^GEA", "", existGEA$analysis_accession))) + 1
-#     runs <- runs[arm_name %in% arm_todo]
-#   }
-#   runs <- gsub(".tsv$", "", runs$name)
-#   nCoefs <- nrow(allCoefs)
-# }
-#
-# if(nCoefs == 0){
-#   infostring <- "This analysis has already been run. You can visualize the results using the Data Explorer module."
-# } else if(nCoefs > 0){
-#   infostring <- paste("There will be", nCoefs, "new differential expression analysis.")
-# }
-#
-# r infostring
-#
-# if(nCoefs == 0){
-#   opts_chunk$set(eval = FALSE, echo = FALSE)
-# }
-#
-# idx <- 1
-# GEA_list <- vector("list")
-# GEAR_list <- vector("list")
-# #GEA_list <- vector("list", nCoefs)
-# #GEAR_list <- vector("list", nCoefs)
-# for(run in runs){
-#   EM <- con$getGEMatrix(run)
-#   pd <- data.table(pData(EM))
-#   cm <- con$getDataset("cohort_membership")
-#   cm <- unique(cm[, list(cohort, arm_accession)])
-#   pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
-#   to_drop <- unique(pd[study_time_collected <= 0, coef])
-#   pd <- pd[coef %in% to_drop, coef := "baseline"]
-#   pd <- pd[, coef := factor(coef,levels = c("baseline",
-#                                             grep("baseline", value = TRUE, invert = TRUE, mixedsort(unique(coef)))))]
-#   #mm <- model.matrix(formula("~ParticipantId + coef"), pd)
-#   mm <- model.matrix(formula("~participant_id + coef"), pd)
-#
-#   # Check if it's RNA-seq or microarrays
-#   if(max(exprs(EM))>100){
-#     fit <- lmFit(voom(EM), mm)
-#   } else{
-#     fit <- lmFit(EM, mm)
-#   }
-#
-#   fit <- eBayes(fit)
-#
-#   coefs <- grep("^coef", colnames(mm), value = TRUE)
-#   for(coef in coefs){
-#     analysis_accession <- paste0("GEA", i)
-#     TP <- gsub("coef", "", coef)
-#     arm_name <- unique(pData(EM)$cohort)
-#     arm_accession <- cm[cohort == arm_name, arm_accession]
-#     if(is.null(arm_name)){ arm_name <- NA }
-#     description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
-#
-#     GEA_list[[idx]] <- data.table(analysis_accession = analysis_accession,
-#                                   expression_matrix = run, arm_name = arm_name,
-#                                   arm_accession = arm_accession,
-#                                   coefficient = gsub("^coef", "", coef), description = description)
-#     tt <- data.table(topTable(fit, coef = coef, number = Inf))
-#     ttDE <- tt[adj.P.Val < 0.02]
-#     if(nrow(ttDE) < 100){
-#       tt <- tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
-#     } else{
-#       tt <- ttDE
-#     }
-#     if(nrow(tt) > 0){
-#       tt[, c("analysis_accession", "coefficient") := list(analysis_accession, coef)]
-#       GEAR_list[[idx]] <- data.table(tt)
-#     }
-#     i <- i + 1
-#     idx <- idx+1
-#   }
-# }
-# GEA <- rbindlist(GEA_list)
-# if(length(GEAR_list) == 0){
-#   warning("No feature was found to be differentially expressed at any timepoint.")
-#   opts_chunk$set(eval = FALSE, echo = FALSE)
-# } else{
-#   GEAR <- rbindlist(GEAR_list)
-#   setnames(GEAR, c("FeatureId", "gene_symbol", "adj.P.Val", "AveExpr", "logFC", "P.Value", "t"), c("feature_id", "gene_symbol", "adj_p_val", "ave_expr", "log_fc", "p_value", "statistic"))
-# }
-#
-# res_GEA <- labkey.importRows(labkey.url.base, labkey.url.path, "gene_expression",
-#                              "gene_expression_analysis", toImport = GEA)
-# res_GEAR <- labkey.importRows(labkey.url.base, labkey.url.path, "gene_expression",
-#                               "gene_expression_analysis_results", toImport = GEAR)
+  infostring <- ""
+  labkey.url.base <- baseUrl
+  contrast <- c("study_time_collected", "study_time_collected_unit")
+  con <- CreateConnection(sdy)
+  con$GeneExpressionInputs()
+  GEA_list <- vector("list")
+  GEAR_list <- vector("list")
 
+  runs <- runsDF$name[ runsDF$folder_name == sdy ]
 
+  idx <- 1 # analysis accession key
+  for(run in runs){
+    EM <- con$getGEMatrix(run) # this pulls the summary, updatedAnno, normalized version
+    pd <- data.table(pData(EM))
+    pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
+    to_drop <- unique(pd[study_time_collected <= 0, coef])
+    pd <- pd[coef %in% to_drop, coef := "baseline"]
+    pd <- pd[, coef := factor(coef, levels = c("baseline",
+                                               grep("baseline",
+                                                    value = TRUE,
+                                                    invert = TRUE,
+                                                    mixedsort(unique(coef)))))]
+    mm <- model.matrix(formula("~participant_id + coef"), pd)
+
+    # Check if it's RNA-seq or microarrays
+    if( max(exprs(EM)) > 100 ){ EM <- voom(EM) }
+    fit <- lmFit(EM, mm)
+    fit <- eBayes(fit)
+
+    # Prep for coefficients work
+    cm <- con$getDataset("cohort_membership")
+    cm <- unique( cm[, list(cohort, arm_accession)] )
+    coefs <- grep("^coef", colnames(mm), value = TRUE)
+
+    for(coef in coefs){
+      analysis_accession <- paste0("GEA", idx)
+      TP <- gsub("coef", "", coef)
+      arm_name <- unique(pData(EM)$cohort)
+      arm_accession <- cm[cohort == arm_name, arm_accession]
+      arm_name[ is.null(arm_name) ] <- NA
+      description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
+
+      GEA_list[[idx]] <- data.table(analysis_accession = analysis_accession,
+                                    expression_matrix = run,
+                                    arm_name = arm_name,
+                                    arm_accession = arm_accession,
+                                    coefficient = gsub("^coef", "", coef),
+                                    description = description)
+
+      tt <- data.table(topTable(fit, coef = coef, number = Inf))
+      tt <- if( sum(tt$adj.P.Val < 0.02) < 100 ){
+               tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
+            }else{
+               tt[adj.P.Val < 0.02]
+            }
+
+      if(nrow(tt) > 0){
+        tt[, c("analysis_accession", "coefficient") := list(analysis_accession, coef)]
+        tt[, coefficient := gsub("coef","", coefficient) ]
+        GEAR_list[[idx]] <- data.table(tt)
+      }
+      idx <- idx + 1
+    }
+  }
+
+  # GEA gets updated rows, b/c will be same dimension and PK
+  newGEA <- rbindlist(GEA_list)
+  currGEA <- labkey.selectRows(con$config$labkey.url.base,
+                              con$config$labkey.url.path,
+                              "gene_expression",
+                              "gene_expression_analysis",
+                              colNameOpt = "rname",
+                              showHidden = T)
+
+  # Must match by unique which is arm_accession + coefficient
+  currOrder <- paste(currGEA$arm_accession, currGEA$coefficient)
+  newOrder <- paste(newGEA$arm_accession, newGEA$coefficient)
+  newGEA$key <- currGEA$key[ match(newOrder, currOrder) ]
+
+  doneGEA <- labkey.updateRows(con$config$labkey.url.base,
+                              con$config$labkey.url.path,
+                              "gene_expression",
+                              "gene_expression_analysis",
+                              toUpdate = GEA)
+
+  # TODO: MUST CHECK FOR CORRECT UPDATES!
+
+  # GEAR gets deleted and then new rows imported because
+  # new mappings will be different and do not want to have leftovers
+  if(length(GEAR_list) != 0){
+    GEAR <- rbindlist(GEAR_list)
+    GEAR[ is.na(GEAR) ] <- ""
+    setnames(GEAR,
+             c("FeatureId", "gene_symbol", "adj.P.Val", "AveExpr", "logFC", "P.Value", "t"),
+             c("feature_id", "gene_symbol", "adj_p_val", "ave_expr", "log_fc", "p_value", "statistic"))
+    toImport <- data.frame(GEAR, stringsAsFactors = F)
+
+    currGEAR <- labkey.selectRows(con$config$labkey.url.base,
+                                  con$config$labkey.url.path,
+                                 "gene_expression",
+                                 "gene_expression_analysis_results",
+                                  colNameOpt = "rname",
+                                  showHidden = T)
+
+    delGEAR <- labkey.deleteRows(con$config$labkey.url.base,
+                                 con$config$labkey.url.path,
+                                 "gene_expression",
+                                 "gene_expression_analysis_results",
+                                 toDelete = currGEAR)
+
+    # NEED TO CHECK FOR CORRECTLY DELETED!
+
+    resGEAR <- labkey.importRows(con$config$labkey.url.base,
+                                 con$config$labkey.url.path,
+                                 "gene_expression",
+                                 "gene_expression_analysis_results",
+                                 toImport = toImport)
+  }
+}
 
 #######################################################################
 ###            4. Update GSEA Modules                               ###
@@ -297,14 +320,27 @@ updateEMs <- function(){
 ###                         MAIN SCRIPT                             ###
 #######################################################################
 
-# fast way to figure out PROD vs TEST
-con <- CreateConnection("")
-baseUrl <- con$config$labkey.url.base
+runUpdateAnno <- function(baseUrl){
 
-runUpdateAnno <- function(){
-  updateFAS()
-  updateEMs()
-  updateGEAR()
+  chk <- readline(prompt = paste0("You are running on ",
+                                  baseUrl,
+                                  ". Ok to proceed? [T/f] "))
+
+  if( !(chk %in% c("", "t", "T")) ){ return("Operations ended.") }
+
+  # update the FeatureAnnotation$GeneSymbol column, while preserving
+  # original gene alias in AccessionId
+  updateFAS(baseUrl)
+
+  # Get studies with matrices
+  runsDF <- labkey.selectRows(baseUrl = baseUrl,
+                              folderPath = "/Studies/",
+                              schemaName = "assay.ExpressionMatrix.matrix",
+                              queryName = "Runs",
+                              colNameOpt = "rname")
+  sdys <- runsDF$folder_name
+  lapply(sdys, updateEMs) # update flat files for summary only
+  lapply(sdys, updateGEAR, runsDF = runsDF) # using con$getGEMatrix(summary = T, currAnno = T, norm = T)
 }
 
 

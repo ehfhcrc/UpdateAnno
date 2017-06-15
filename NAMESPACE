@@ -2,4 +2,10 @@
 
 export(outputUpdatedBTM)
 export(updateAnno)
+import(Biobase)
+import(ImmuneSpaceR)
+import(Rlabkey)
 import(data.table)
+import(gtools)
+import(limma)
+import(org.Hs.eg.db)
