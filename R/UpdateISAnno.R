@@ -7,7 +7,7 @@
 # 1. ssh rsT or rsP
 # 2. become ImmuneSpace user (able to rename files AND access LK with auth)
 # 3. R (to open up R)
-# 4. devtools::install_github("ehfhcrc/UpdateAnno", build_vignette = T)
+# 4. devtools::install_github("RGLab/UpdateAnno", build_vignette = T)
 #    This ensures that the latest symbols are loaded into the data in the library by the vignette.
 # 5. library(UpdateAnno)
 # 6. runUpdateAnno(baseUrl = "https://test.immunespace.org" )
@@ -36,7 +36,11 @@
 #######################################################################
 # NOTES: This will take care of GeneExpressionExplorer Module, which uses
 # the Microarray.FeatureAnnotation table to populate a dropdown for selection
-# of genes of interest.
+# of genes of interest.  GEE will look for the FASid that was given to the original
+# FAS when it was uploaded and this is challenging to change, therefore
+# it was decided to move the original to a new FAS called "myOriginalFasName_orig"
+# that gets a new FASid.  Con$getGEMatrix() then looks for this new FASid when
+# populating the probe level gene symbols with the currAnno = F flag.
 
 updateFAS <- function(baseUrl){
 
@@ -68,25 +72,30 @@ updateFAS <- function(baseUrl){
 
   # MAIN ------------------------------------------------------------
   # for each name in fas (that does not have "_update"), see if there is an updated version
+  # then work on the updated version if there is one or create one.
   currFAS <- currFas(baseUrl)
-  fasNms <- currFAS$Name[ !("_updated" %in% currFAS$Name) ]
+  fasNms <- currFAS$Name[ !("_orig" %in% currFAS$Name) ]
   lapply(fasNms, FUN = function(nm){
-    upNm <- paste0(nm, "_updated")
-    updated <- upNm %in% currFAS$Name
-    currNm <- ifelse( updated, upNm, nm )
-    features <- getAnno(currNm, currFAS, baseUrl)
-    features$GeneSymbol <- updateAnno(features$GeneSymbol)
-    if( updated ){
+    currAnno <- getAnno(nm, currFAS, baseUrl)
+    orNm <- paste0(nm, "_orig")
+    if( orNm %in% currFAS$Name ){
+      # if orig is present, update the rows of the updated anno using the orig
+      # as the base for mapping to ensure that updates of updates are avoided
+      orAnno <- getAnno(orNm, currFAS, baseUrl)
+      orAnno$GeneSymbol <- updateAnno(orAnno$GeneSymbol)
+      currAnno$GeneSymbol <- orAnno$GeneSymbol[ match(currAnno$FeatureId, orAnno$FeatureId) ]
+      currAnno[ is.na(currAnno) ] <- ""
+      toUpdate <- data.frame(currAnno, stringsAsFactors = F)
       done <- labkey.updateRows(baseUrl = baseUrl,
                                 folderPath = "/Studies/",
                                 schemaName = "Microarray",
                                 queryName = "FeatureAnnotation",
-                                toUpdate = features)
+                                toUpdate = toUpdate)
     }else{
       # Create new featureAnnotationSet with "_updated" name
       toImport <- data.frame(currFAS[ currFAS$Name == nm, ])
       toImport <- toImport[ , !(colnames(toImport) == "RowId") ]
-      toImport$Name <- paste0(toImport$Name, "_updated")
+      toImport$Name <- paste0(toImport$Name, "_orig")
       addFas <- labkey.importRows(baseUrl = baseUrl,
                                   folderPath = "/Studies/",
                                   schemaName = "Microarray",
@@ -96,19 +105,29 @@ updateFAS <- function(baseUrl){
       # check that new set has been imported correctly
       nowFas <- currFas(baseUrl)
       if( !(toImport$Name[[1]] %in% nowFas$Name) ){
-        stop("Updated FAS (",toImport$Name[[1]],") not imported correctly")
+        stop("Original FAS (",toImport$Name[[1]],") not imported correctly")
       }
 
       # Prep for importRows by removing rowIds (will be given) and using new FASid
-      features <- features[ , !(colnames(features) == "RowId") ]
-      features$FeatureAnnotationSetId <- nowFas$RowId[ nowFas$Name == toImport$Name[[1]] ]
-      features[ is.na(features) ] <- ""
-      features <- data.frame(features, stringsAsFactors = F)
+      currAnno <- currAnno[ , !(colnames(currAnno) == "RowId") ]
+      currAnno$FeatureAnnotationSetId <- nowFas$RowId[ nowFas$Name == toImport$Name[[1]] ]
+      currAnno[ is.na(currAnno) ] <- ""
+      toImport <- data.frame(currAnno, stringsAsFactors = F)
       addFeatures <- labkey.importRows(baseUrl = baseUrl,
                                   folderPath = "/Studies/",
                                   schemaName = "Microarray",
                                   queryName = "FeatureAnnotation",
-                                  toImport = features)
+                                  toImport = toImport)
+
+      # Now update the old fasId rows with new geneSymbols
+      currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
+      currAnno[ is.na(currAnno) ] <- ""
+      toUpdate <- data.frame(currAnno, stringsAsFactors = F)
+      done <- labkey.updateRows(baseUrl = baseUrl,
+                                folderPath = "/Studies/",
+                                schemaName = "Microarray",
+                                queryName = "FeatureAnnotation",
+                                toUpdate = toUpdate)
     }
   })
 }
@@ -164,17 +183,15 @@ updateEMs <- function(sdy){
 #######################################################################
 ###            3. Update DGEA-Results                               ###
 #######################################################################
-  # This table is used in the module Differential Gene Expression Analysis
-  # GEARres <- labkey.selectRows(baseUrl = baseUrl,
-  #                              folderPath = "/Studies/",
-  #                              schemaName = "gene_expression",
-  #                              queryName = "gene_expression_analysis_results",
-  #                              colNameOpt = "fieldname",
-  #                              showHidden = TRUE)
+# This table is used in the module Differential Gene Expression Analysis
+# GEARres <- labkey.selectRows(baseUrl = baseUrl,
+#                              folderPath = "/Studies/",
+#                              schemaName = "gene_expression",
+#                              queryName = "gene_expression_analysis_results",
+#                              colNameOpt = "fieldname",
+#                              showHidden = TRUE)
 
-  # Any time that updateAnno is run, will need to blow away the table and redo via
-  # https://github.com/RGLab/LabKeyModules/blob/master/DifferentialExpressionAnalysis/reports/schemas/assay.ExpressionMatrix.matrix/Runs/DifferentialExpressionAnalysis.Rmd
-    # labkey.deleteRows()??
+# This method is based on the DGEA.Rmd found in the DGEA module
 
 updateGEAR <- function(sdy, baseUrl, runsDF){
 
@@ -282,19 +299,32 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
                                   colNameOpt = "rname",
                                   showHidden = T)
 
+    # LK only needs the PK column and must be stringsAsFactors = F to accept
+    toDelete <- data.frame(key = currGEAR$key, stringsAsFactors = F)
+
     delGEAR <- labkey.deleteRows(con$config$labkey.url.base,
                                  con$config$labkey.url.path,
                                  "gene_expression",
                                  "gene_expression_analysis_results",
-                                 toDelete = currGEAR)
+                                 toDelete = toDelete)
 
-    # NEED TO CHECK FOR CORRECTLY DELETED!
+    postDeleteGEAR <- labkey.selectRows(con$config$labkey.url.base,
+                                        con$config$labkey.url.path,
+                                        "gene_expression",
+                                        "gene_expression_analysis_results",
+                                        colNameOpt = "rname",
+                                        showHidden = T)
 
-    resGEAR <- labkey.importRows(con$config$labkey.url.base,
-                                 con$config$labkey.url.path,
-                                 "gene_expression",
-                                 "gene_expression_analysis_results",
-                                 toImport = toImport)
+    if( nrow(postDeleteGEAR) == 0){
+      resGEAR <- labkey.importRows(con$config$labkey.url.base,
+                                   con$config$labkey.url.path,
+                                   "gene_expression",
+                                   "gene_expression_analysis_results",
+                                   toImport = toImport)
+    }else{
+      stop("not all GEAR deleted correctly")
+    }
+
   }
 }
 
@@ -322,17 +352,17 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
 
 runUpdateAnno <- function(baseUrl){
 
+  # Double-check whether to run on test or prod
   chk <- readline(prompt = paste0("You are running on ",
                                   baseUrl,
-                                  ". Ok to proceed? [T/f] "))
+                                  ". Continue? [T/f] "))
 
   if( !(chk %in% c("", "t", "T")) ){ return("Operations ended.") }
 
-  # update the FeatureAnnotation$GeneSymbol column, while preserving
-  # original gene alias in AccessionId
+  # Update the secondary / updated FeatureAnnotation set
   updateFAS(baseUrl)
 
-  # Get studies with matrices
+  # Get studies with gene expression matrices
   runsDF <- labkey.selectRows(baseUrl = baseUrl,
                               folderPath = "/Studies/",
                               schemaName = "assay.ExpressionMatrix.matrix",
