@@ -9,10 +9,10 @@
 updateAnno <- function(vec){
   vec_dt <- data.table(vec)
   setnames(vec_dt, "vec", "ALIAS")
-  std <- data.table(select(org.Hs.eg.db,
+  std <- suppressMessages(data.table(select(org.Hs.eg.db,
                            keys = keys(org.Hs.eg.db, keytype = "SYMBOL"),
                            columns = c("ALIAS", "SYMBOL"),
-                           keytype = "SYMBOL"))
+                           keytype = "SYMBOL")))
   vec_dt[std, SYMBOL := SYMBOL, on = c(ALIAS = "ALIAS")]
   return(vec_dt$SYMBOL)
 }
