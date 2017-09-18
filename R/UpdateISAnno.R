@@ -225,7 +225,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
   idx <- 1 # analysis accession key
   for(run in runs){
     print(paste0("working on run: ", run))
-    EM <- con$getGEMatrix(run, summary = T, currAnno = T, norm = T) # note params!
+    EM <- con$getGEMatrix(run, outputType = "normalized", annotation = "latest") # note params!
     pd <- data.table(pData(EM))
     pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
     to_drop <- unique(pd[study_time_collected <= 0, coef])
