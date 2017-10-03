@@ -40,7 +40,7 @@
 # FAS when it was uploaded and this is challenging to change, therefore
 # it was decided to move the original to a new FAS called "myOriginalFasName_orig"
 # that gets a new FASid.  Con$getGEMatrix() then looks for this new FASid when
-# populating the probe level gene symbols with the currAnno = F flag.
+# populating the probe level gene symbols with the arg: `annotation = "default"`.
 
 #' @export updateFAS
 updateFAS <- function(baseUrl){
@@ -76,8 +76,8 @@ updateFAS <- function(baseUrl){
 
 
   # MAIN ------------------------------------------------------------
-  # for each name in fas (that does not have "_update"), see if there is an updated version
-  # then work on the updated version if there is one or create one. Exceptions are those
+  # for each name in fas$name see if there is an updated version then work on the
+  # updated version if there is one or create one if there is not. Exceptions are those
   # used for ImmuneSignatures or have "NA" hardcoded as vendor. These will not be updated.
   currFAS <- currFas(baseUrl)
   currFAS <- currFAS[ !is.na(currFAS$Vendor) & currFAS$Vendor != "NA", ]
