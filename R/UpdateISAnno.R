@@ -433,7 +433,7 @@ runUpdateAnno <- function(baseUrl){
                               colNameOpt = "rname")
   sdys <- unique(runsDF$folder_name)
   lapply(sdys, updateEMs, runsDF = runsDF) # update flat files for summary only
-  lapply(sdys, updateGEAR, baseUrl = baseUrl, runsDF = runsDF) # using con$getGEMatrix(summary = T, currAnno = T, norm = T)
+  lapply(sdys, updateGEAR, baseUrl = baseUrl, runsDF = runsDF) # using con$getGEMatrix(outputType = "normalized", annotation = "latest")
 }
 
 
