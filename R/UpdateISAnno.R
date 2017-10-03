@@ -45,15 +45,19 @@
 #' @export updateFAS
 updateFAS <- function(baseUrl){
 
-  # helper fn-----------------------------------------------
+  # vars ---------------------------------------------------
+  folderpath <- "/Studies/"
+  schemaName <- "Microarray"
+
+  # helper fn ----------------------------------------------
   getAnno <- function(nm, currFAS, baseUrl){
     annoSetId <- currFAS$RowId[ currFAS$Name == nm ]
     fasQuery <- sprintf("SELECT * from FeatureAnnotation
                           where FeatureAnnotationSetId='%s';",
                         annoSetId)
     features <- labkey.executeSql(baseUrl = baseUrl,
-                                  folderPath = "/Studies/",
-                                  schemaName = "Microarray",
+                                  folderPath = folderPath,
+                                  schemaName = schemaName,
                                   sql = fasQuery,
                                   colNameOpt = "fieldname",
                                   showHidden = T)
@@ -63,8 +67,8 @@ updateFAS <- function(baseUrl){
 
   currFas <- function(baseUrl){
     res <- data.table(labkey.selectRows(baseUrl = baseUrl,
-                                        folderPath = "/Studies/",
-                                        schemaName = "Microarray",
+                                        folderPath = folderPath,
+                                        schemaName = schemaName,
                                         queryName = "FeatureAnnotationSet",
                                         colNameOpt = "fieldname",
                                         showHidden = TRUE ))
@@ -73,9 +77,12 @@ updateFAS <- function(baseUrl){
 
   # MAIN ------------------------------------------------------------
   # for each name in fas (that does not have "_update"), see if there is an updated version
-  # then work on the updated version if there is one or create one.
+  # then work on the updated version if there is one or create one. Exceptions are those
+  # used for ImmuneSignatures or have "NA" hardcoded as vendor. These will not be updated.
   currFAS <- currFas(baseUrl)
-  fasNms <- currFAS$Name[ grep("*orig", currFAS$Name, invert = T) ]
+  currFAS <- currFAS[ !is.na(currFAS$Vendor) & currFAS$Vendor != "NA", ]
+  fasNms <- currFAS$Name[ grep("orig|ImmSig", currFAS$Name, invert = T) ]
+
   lapply(fasNms, FUN = function(nm){
     print(paste0("Updating: ", nm))
     currAnno <- getAnno(nm, currFAS, baseUrl)
@@ -91,8 +98,8 @@ updateFAS <- function(baseUrl){
       currAnno[ is.na(currAnno) ] <- ""
       toUpdate <- data.frame(currAnno, stringsAsFactors = F)
       done <- labkey.updateRows(baseUrl = baseUrl,
-                                folderPath = "/Studies/",
-                                schemaName = "Microarray",
+                                folderPath = folderPath,
+                                schemaName = schemaName,
                                 queryName = "FeatureAnnotation",
                                 toUpdate = toUpdate)
     }else{
@@ -102,8 +109,8 @@ updateFAS <- function(baseUrl){
       toImport <- toImport[ , !(colnames(toImport) == "RowId") ]
       toImport$Name <- orNm
       addFas <- labkey.importRows(baseUrl = baseUrl,
-                                  folderPath = "/Studies/",
-                                  schemaName = "Microarray",
+                                  folderPath = folderPath,
+                                  schemaName = schemaName,
                                   queryName = "FeatureAnnotationSet",
                                   toImport = toImport)
 
@@ -119,20 +126,34 @@ updateFAS <- function(baseUrl){
       orAnno[ is.na(orAnno) ] <- ""
       toImport <- data.frame(orAnno, stringsAsFactors = F)
       addFeatures <- labkey.importRows(baseUrl = baseUrl,
-                                  folderPath = "/Studies/",
-                                  schemaName = "Microarray",
-                                  queryName = "FeatureAnnotation",
-                                  toImport = toImport)
+                                       folderPath = folderPath,
+                                       schemaName = schemaName,
+                                       queryName = "FeatureAnnotation",
+                                       toImport = toImport)
 
-      # Now update the old fasId rows with new geneSymbols
-      currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
-      currAnno[ is.na(currAnno) ] <- ""
-      toUpdate <- data.frame(currAnno, stringsAsFactors = F)
-      done <- labkey.updateRows(baseUrl = baseUrl,
-                                folderPath = "/Studies/",
-                                schemaName = "Microarray",
-                                queryName = "FeatureAnnotation",
-                                toUpdate = toUpdate)
+      featureChk <- labkey.selectRows(baseUrl = baseUrl,
+                                      folderPath = folderPath,
+                                      schemaName = schemaName,
+                                      queryName = "FeatureAnnotation",
+                                      colFilter = makeFilter(c("FeatureAnnotationSetId",
+                                                               "EQUALS",
+                                                               unique(toImport$FeatureAnnotationSetId)))
+                                      )
+      if( all.equal(featureChk, toImport) ){
+        # Now update the old fasId rows with new geneSymbols
+        currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
+        currAnno[ is.na(currAnno) ] <- ""
+        toUpdate <- data.frame(currAnno, stringsAsFactors = F)
+        done <- labkey.updateRows(baseUrl = baseUrl,
+                                  folderPath = folderPath,
+                                  schemaName = schemaName,
+                                  queryName = "FeatureAnnotation",
+                                  toUpdate = toUpdate)
+      }else{
+        stop("Original FA not uploaded correctly to *_orig table")
+      }
+
+
     }
   })
   return(TRUE)
@@ -392,6 +413,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
 
 #' @export runUpdateAnno
 runUpdateAnno <- function(baseUrl){
+  folderpath <- "/Studies/"
 
   # Double-check whether to run on test or prod
   chk <- readline(prompt = paste0("You are running on ",
@@ -405,7 +427,7 @@ runUpdateAnno <- function(baseUrl){
 
   # Get studies with gene expression matrices
   runsDF <- labkey.selectRows(baseUrl = baseUrl,
-                              folderPath = "/Studies/",
+                              folderPath = folderPath,
                               schemaName = "assay.ExpressionMatrix.matrix",
                               queryName = "Runs",
                               colNameOpt = "rname")
