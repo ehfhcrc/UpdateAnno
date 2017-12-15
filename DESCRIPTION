@@ -20,6 +20,6 @@ Suggests: knitr,
 Imports: plyr,
     data.table,
     devtools,
-    org.Hs.eq.db
+    org.Hs.eg.db
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
