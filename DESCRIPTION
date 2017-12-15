@@ -12,13 +12,14 @@ Description: Starting with the original list of gene sets from 2013,
 License: Unlicensed
 Encoding: UTF-8
 LazyData: true
+biocViews: GenomeAnnotation
 Depends: R (>= 2.10)
 Suggests: knitr,
     rmarkdown,
-    GSEABase,
-    org.Hs.eq.db
+    GSEABase
 Imports: plyr,
     data.table,
-    devtools
+    devtools,
+    org.Hs.eg.db
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
