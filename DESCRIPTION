@@ -12,13 +12,19 @@ Description: Starting with the original list of gene sets from 2013,
 License: Unlicensed
 Encoding: UTF-8
 LazyData: true
+biocViews: Visualization
 Depends: R (>= 2.10)
 Suggests: knitr,
     rmarkdown,
     GSEABase,
-    org.Hs.eq.db
+    org.Hs.eq.db,
 Imports: plyr,
     data.table,
-    devtools
+    devtools,
+    Rlabkey,
+    ImmuneSpaceR,
+    gtools,
+    limma,
+    Biobase
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
