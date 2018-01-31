@@ -46,7 +46,7 @@
 updateFAS <- function(baseUrl){
 
   # vars ---------------------------------------------------
-  folderpath <- "/Studies/"
+  folderPath <- "/Studies/"
   schemaName <- "Microarray"
 
   # helper fn ----------------------------------------------
@@ -78,17 +78,16 @@ updateFAS <- function(baseUrl){
   # MAIN ------------------------------------------------------------
   # for each name in fas$name see if there is an updated version then work on the
   # updated version if there is one or create one if there is not. Exceptions are those
-  # used for ImmuneSignatures or have "NA" hardcoded as vendor. These will not be updated.
+  # with "Do Not Update", "non-updatable" or similar string in the Comment column.
   currFAS <- currFas(baseUrl)
-  currFAS <- currFAS[ !is.na(currFAS$Vendor) & currFAS$Vendor != "NA", ]
-  fasNms <- currFAS$Name[ grep("orig|ImmSig", currFAS$Name, invert = T) ]
+  fasNms <- currFAS$Name[ grep("[N|n]o[n|t|][-| ][u|U]pdat[e|able]", currFAS$Comment, invert = T) ]
 
   lapply(fasNms, FUN = function(nm){
-    print(paste0("Updating: ", nm))
+    message(paste0("Updating: ", nm))
     currAnno <- getAnno(nm, currFAS, baseUrl)
     orNm <- paste0(nm, "_orig")
     if( orNm %in% currFAS$Name ){
-      print("Updating FAS")
+      message("Updating FAS")
       # if orig is present means that update has been performed at least once.
       # Update the rows of the previously updated anno using the orig
       # as the base for mapping to ensure that updates of updates are avoided
@@ -104,7 +103,7 @@ updateFAS <- function(baseUrl){
                                 toUpdate = toUpdate)
     }else{
       print("Creating New updated FAS")
-      # Create new featureAnnotationSet with "_updated" name
+      # Create featureAnnotationSet with "_orig" name
       toImport <- data.frame(currFAS[ currFAS$Name == nm, ])
       toImport <- toImport[ , !(colnames(toImport) == "RowId") ]
       toImport$Name <- orNm
@@ -114,7 +113,7 @@ updateFAS <- function(baseUrl){
                                   queryName = "FeatureAnnotationSet",
                                   toImport = toImport)
 
-      # check that new set has been imported correctly
+      # check that new "_orig" set has been imported correctly
       nowFas <- currFas(baseUrl)
       if( !(toImport$Name[[1]] %in% nowFas$Name) ){
         stop("Original FAS (",toImport$Name[[1]],") not imported correctly")
