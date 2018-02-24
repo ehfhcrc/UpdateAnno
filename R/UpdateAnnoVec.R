@@ -2,6 +2,7 @@
 #'
 #' @param vec character vector of gene aliases
 #' @import data.table
+#' @importFrom AnnotationDbi select
 #' @export
 #'
 

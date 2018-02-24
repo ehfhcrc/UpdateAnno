@@ -20,6 +20,9 @@ Suggests: knitr,
 Imports: plyr,
     data.table,
     devtools,
-    org.Hs.eg.db
+    org.Hs.eg.db,
+    AnnotationDbi,
+    Biobase,
+    limma
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
