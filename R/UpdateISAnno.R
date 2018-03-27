@@ -80,7 +80,8 @@ updateFAS <- function(baseUrl){
   # updated version if there is one or create one if there is not. Exceptions are those
   # with "Do Not Update", "non-updatable" or similar string in the Comment column.
   currFAS <- currFas(baseUrl)
-  fasNms <- currFAS$Name[ grep("[N|n]o[n|t|][-| ][u|U]pdat[e|able]", currFAS$Comment, invert = T) ]
+  fasNms <- currFAS$Name[ grep("[N|n]o[n|t|][-| ][u|U]pdat[e|able]",
+                               currFAS$Comment, invert = T) ]
 
   lapply(fasNms, FUN = function(nm){
     message(paste0("Updating: ", nm))
@@ -103,7 +104,7 @@ updateFAS <- function(baseUrl){
                                 toUpdate = toUpdate)
     }else{
       print("Creating New updated FAS")
-      # Create featureAnnotationSet with "_orig" name
+      # First create featureAnnotationSet with "_orig" name and original annotation
       toImport <- data.frame(currFAS[ currFAS$Name == nm, ])
       toImport <- toImport[ , !(colnames(toImport) == "RowId") ]
       toImport$Name <- orNm
@@ -150,20 +151,19 @@ updateFAS <- function(baseUrl){
                                     queryName = "FeatureAnnotation",
                                     toUpdate = FAUpdate)
 
-        # Update FAS$comment to be packageVersion of org.Hs.eg.db
-        updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = F)
-        updateFAS$Comment <- paste0("Alias2Symbol mapping with org.Hs.eg.db version: ",
-                                    UpdateAnno::orgHsEgDb_version)
-        FASdone <- labkey.updateRows(baseUrl = baseUrl,
-                                     folderPath = folderPath,
-                                     schemaName = schemaName,
-                                     queryName = "FeatureAnnotationSet",
-                                     toUpdate = updateFAS)
-
       }else{
         stop("Original FA not uploaded correctly to *_orig table")
       }
 
+      # Update FAS$comment to be packageVersion of org.Hs.eg.db
+      updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = F)
+      updateFAS$Comment <- paste0("Alias2Symbol mapping with org.Hs.eg.db version: ",
+                                  UpdateAnno::orgHsEgDb_version)
+      FASdone <- labkey.updateRows(baseUrl = baseUrl,
+                                   folderPath = folderPath,
+                                   schemaName = schemaName,
+                                   queryName = "FeatureAnnotationSet",
+                                   toUpdate = updateFAS)
 
     }
   })
