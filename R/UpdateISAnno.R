@@ -107,6 +107,7 @@ updateFAS <- function(baseUrl){
       toImport <- data.frame(currFAS[ currFAS$Name == nm, ])
       toImport <- toImport[ , !(colnames(toImport) == "RowId") ]
       toImport$Name <- orNm
+      toImport$Comment <- "Do not update"
       addFas <- labkey.importRows(baseUrl = baseUrl,
                                   folderPath = folderPath,
                                   schemaName = schemaName,
@@ -142,12 +143,23 @@ updateFAS <- function(baseUrl){
         # Now update the old fasId rows with new geneSymbols
         currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
         currAnno[ is.na(currAnno) ] <- ""
-        toUpdate <- data.frame(currAnno, stringsAsFactors = F)
-        done <- labkey.updateRows(baseUrl = baseUrl,
-                                  folderPath = folderPath,
-                                  schemaName = schemaName,
-                                  queryName = "FeatureAnnotation",
-                                  toUpdate = toUpdate)
+        FAUpdate <- data.frame(currAnno, stringsAsFactors = F)
+        FAdone <- labkey.updateRows(baseUrl = baseUrl,
+                                    folderPath = folderPath,
+                                    schemaName = schemaName,
+                                    queryName = "FeatureAnnotation",
+                                    toUpdate = FAUpdate)
+
+        # Update FAS$comment to be packageVersion of org.Hs.eg.db
+        updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = F)
+        updateFAS$Comment <- paste0("Alias2Symbol mapping with org.Hs.eg.db version: ",
+                                    UpdateAnno::orgHsEgDb_version)
+        FASdone <- labkey.updateRows(baseUrl = baseUrl,
+                                     folderPath = folderPath,
+                                     schemaName = schemaName,
+                                     queryName = "FeatureAnnotationSet",
+                                     toUpdate = updateFAS)
+
       }else{
         stop("Original FA not uploaded correctly to *_orig table")
       }

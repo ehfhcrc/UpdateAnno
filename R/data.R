@@ -138,3 +138,14 @@
 #'  http://www.nature.com/nri/journal/v14/n4/full/nri3642.html
 "orig_chaussabel"
 
+#' org.Hs.eg.db packageVersion
+#'
+#' packageVersion of org.Hs.eg.db used to update gene symbols. Pushed
+#' to microarray.FeatureAnnotationSet.
+#'
+#' @format string
+#' \describe{
+#'   \item{value}{packageVersion of org.Hs.eg.db used in updates}
+#'   ...
+#' }
+"orgHsEgDb_version"
