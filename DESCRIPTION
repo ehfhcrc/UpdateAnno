@@ -12,7 +12,6 @@ Description: Starting with the original list of gene sets from 2013,
 License: Unlicensed
 Encoding: UTF-8
 LazyData: true
-<<<<<<< HEAD
 biocViews: Visualization
 Depends: R (>= 2.10)
 Suggests: knitr,
@@ -27,19 +26,5 @@ Imports: plyr,
     gtools,
     limma,
     Biobase
-=======
-biocViews: GenomeAnnotation
-Depends: R (>= 2.10)
-Suggests: knitr,
-    rmarkdown,
-    GSEABase
-Imports: plyr,
-    data.table,
-    devtools,
-    org.Hs.eg.db,
-    AnnotationDbi,
-    Biobase,
-    limma
->>>>>>> fc87c9ba32da5f238171a1645f9237b8a4a50983
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
