@@ -79,5 +79,5 @@ lapply(origMods, updateMod, std = std)
 
 ```{r save-pkgVersion}
 orgHsEgDb_version <- packageVersion("org.Hs.eg.db")
-devtools::use_data(orgHsEgDb_version)
+devtools::use_data(orgHsEgDb_version, overwrite = TRUE)
 ```
