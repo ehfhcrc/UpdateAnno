@@ -136,11 +136,21 @@ updateFAS <- function(baseUrl){
                                       folderPath = folderPath,
                                       schemaName = schemaName,
                                       queryName = "FeatureAnnotation",
+                                      colNameOpt = "fieldname",
+                                      colSelect = c("GeneSymbol", "FeatureId"),
                                       colFilter = makeFilter(c("FeatureAnnotationSetId",
                                                                "EQUALS",
                                                                unique(toImport$FeatureAnnotationSetId)))
                                       )
-      if( all.equal(featureChk, toImport) ){
+      featureChk[ is.na(featureChk) ] <- ""
+      featureChk <- featureChk[ order(featureChk$FeatureId), ]
+      imported <- data.frame(GeneSymbol = toImport$GeneSymbol,
+                             FeatureId = toImport$FeatureId,
+                             stringsAsFactors = FALSE)
+      imported <- imported[ order(imported$FeatureId), ]
+      rownames(imported) <- rownames(featureChk) <- NULL
+
+      if( all.equal(featureChk, imported) ){
         # Now update the old fasId rows with new geneSymbols
         currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
         currAnno[ is.na(currAnno) ] <- ""
