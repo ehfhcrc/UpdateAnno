@@ -192,13 +192,23 @@ updateFAS <- function(baseUrl){
 #' @export updateEMs
 updateEMs <- function(sdy, runsDF){
   print(paste0("working on study: ", sdy))
-  # get file basenames
+
+  # get file basenames present on server
   dirPath <- file.path("/share/files/Studies",
                        sdy,
                        "@files/analysis/exprs_matrices")
   fls <- list.files(dirPath)
   tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
   baseNms <- tmp[ !(tmp %in% c(".summary",".summary.orig", ".raw", ".immsig")) ]
+
+  if(!all(baseNms %in% runsDF$name)){
+    baseNms <- baseNms[ baseNms %in% runsDF$name]
+    warning("Extra files / basenames present in current study.  Please delete.")
+  }
+
+  if( !(all(runsDF$name[ runsDF$folder_name == sdy] %in% baseNms))){
+    stop("Runs missing from files!")
+  }
 
   # go through each baseNm to update summary tsv
   sapply(baseNms, function(nm){
