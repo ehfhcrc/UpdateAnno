@@ -198,7 +198,7 @@ updateEMs <- function(sdy, runsDF){
                        "@files/analysis/exprs_matrices")
   fls <- list.files(dirPath)
   tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
-  baseNms <- tmp[ !(tmp %in% c(".summary",".summary.orig", ".raw")) ]
+  baseNms <- tmp[ !(tmp %in% c(".summary",".summary.orig", ".raw", ".immsig")) ]
 
   # go through each baseNm to update summary tsv
   sapply(baseNms, function(nm){
@@ -206,6 +206,7 @@ updateEMs <- function(sdy, runsDF){
     baseFls <- fls[ grep(nm, fls) ]
 
     # Rename original summary file to tsv.summary.orig if necessary (first time only)
+    # As of 7/2018, runCreateMatrix() is creating .summary.orig file at time of first run
     if( !(paste0(nm, ".tsv.summary.orig") %in% baseFls) ){
       sumFl <- paste0(dirPath, "/", nm, ".tsv.summary")
       dmp <- file.rename( sumFl, paste0(sumFl, ".orig") )
