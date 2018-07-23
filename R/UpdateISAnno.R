@@ -87,6 +87,7 @@ updateFAS <- function(baseUrl){
     message(paste0("Updating: ", nm))
     currAnno <- getAnno(nm, currFAS, baseUrl)
     orNm <- paste0(nm, "_orig")
+
     if( orNm %in% currFAS$Name ){
       message("Updating FAS")
       # if orig is present means that update has been performed at least once.
@@ -164,18 +165,17 @@ updateFAS <- function(baseUrl){
       }else{
         stop("Original FA not uploaded correctly to *_orig table")
       }
-
-      # Update FAS$comment to be packageVersion of org.Hs.eg.db
-      updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = F)
-      updateFAS$Comment <- paste0("Alias2Symbol mapping with org.Hs.eg.db version: ",
-                                  UpdateAnno::orgHsEgDb_version)
-      FASdone <- labkey.updateRows(baseUrl = baseUrl,
-                                   folderPath = folderPath,
-                                   schemaName = schemaName,
-                                   queryName = "FeatureAnnotationSet",
-                                   toUpdate = updateFAS)
-
     }
+
+    # Update FAS$comment to be packageVersion of org.Hs.eg.db
+    updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = F)
+    updateFAS$Comment <- paste0("Alias2Symbol mapping with org.Hs.eg.db version: ",
+                                UpdateAnno::orgHsEgDb_version)
+    FASdone <- labkey.updateRows(baseUrl = baseUrl,
+                                 folderPath = folderPath,
+                                 schemaName = schemaName,
+                                 queryName = "FeatureAnnotationSet",
+                                 toUpdate = updateFAS)
   })
   return(TRUE)
 }
