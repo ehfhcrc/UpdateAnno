@@ -198,7 +198,7 @@ updateEMs <- function(sdy, runsDF){
                        "@files/analysis/exprs_matrices")
   fls <- list.files(dirPath)
   tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
-  baseNms <- tmp[ !(tmp %in% c(".summary",".orig",".summary.orig")) ]
+  baseNms <- tmp[ !(tmp %in% c(".summary",".summary.orig", ".raw")) ]
 
   # go through each baseNm to update summary tsv
   sapply(baseNms, function(nm){
@@ -434,8 +434,6 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
 
 #' @export runUpdateAnno
 runUpdateAnno <- function(baseUrl){
-  folderpath <- "/Studies/"
-
   # Double-check whether to run on test or prod
   chk <- readline(prompt = paste0("You are running on ",
                                   baseUrl,
@@ -446,6 +444,7 @@ runUpdateAnno <- function(baseUrl){
   # Update the secondary / updated FeatureAnnotation set
   updateFAS(baseUrl)
 
+  folderPath <- "/Studies/"
   # Get studies with gene expression matrices
   runsDF <- labkey.selectRows(baseUrl = baseUrl,
                               folderPath = folderPath,
