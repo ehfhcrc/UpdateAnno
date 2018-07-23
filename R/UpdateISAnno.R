@@ -226,8 +226,8 @@ updateEMs <- function(sdy, runsDF){
                                   schemaName = "Microarray",
                                   sql = sqlStr,
                                   colNameOpt = "fieldname")
-    prbEM[ , V1 := as.character(V1)] # for SDY80 where probes have integer vals
-    prbEM <- prbEM[features, gene_symbol := GeneSymbol, on = c(V1 = "FeatureId")]
+    prbEM[ , feature_id := as.character(feature_id)] # for SDY80 where probes have integer vals
+    prbEM <- prbEM[features, gene_symbol := GeneSymbol, on = c(feature_id = "FeatureId")]
 
     # Summarize - lifted from Create-Matrix.R
     em <- prbEM[ !is.na(gene_symbol) & gene_symbol != "NA" ]
