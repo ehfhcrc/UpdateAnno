@@ -263,7 +263,7 @@ updateEMs <- function(sdy, runsDF){
 #                              colNameOpt = "fieldname",
 #                              showHidden = TRUE)
 
-# This method is based on the DGEA.Rmd found in the DGEA module
+# This method is based on the DEA.Rmd found in the DEA module
 
 #' @export updateGEAR
 updateGEAR <- function(sdy, baseUrl, runsDF){
@@ -281,12 +281,16 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
   idx <- 1 # analysis accession key
   for (run in runs) {
 
-    EM <- con$getGEMatrix(matrixName = mx)
+    EM <- con$getGEMatrix(matrixName = run, outputType = "normalized", annotation = "latest")
     pd <- data.table(pData(EM))
     pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
     to_drop <- unique(pd[study_time_collected <= 0, coef])
     pd <- pd[coef %in% to_drop, coef := "baseline"]
     tmp <- grep("baseline", value = TRUE, invert = TRUE, mixedsort(unique(pd$coef)))
+    if( length(tmp) == 0 ){
+      message(paste0(run, " has no timepoints other than baseline! Skipping."))
+      next()
+    }
     pd <- pd[, coef := factor(coef, levels = c("baseline", tmp))] # preps coef col for use in model
     mm <- model.matrix(formula("~participant_id + coef"), pd)
 
@@ -301,43 +305,48 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
       )
 
       if( !is.null(fit$message) ){
-        message(paste0("Linear model not able to be fit for ", mx, ". Skipping to next matrix"))
+        message(paste0("Linear model not able to be fit for ", run, ". Skipping to next matrix"))
         next()
       }
 
-      timepoints <- grep("^coef", colnames(mm), value = TRUE)
-      for (tp in timepoints) {
-        analysis_accession <- paste0("GEA", idx )
-        currTP <- gsub("coef", "", tp)
-        arm_name <- unique(pd$cohort)
-        arm_accession <- cm[ cohort == arm_name, arm_accession ]
-        if (is.null(arm_name)){ arm_name <- NA }
-        description <- paste0("Differential expression in ",
-                              mx, ", ", currTP, " vs. baseline")
+      # Prep for coefficients work
+      cm <- con$getDataset("cohort_membership")
+      cm <- unique( cm[, list(cohort, arm_accession)] )
+      coefs <- grep("^coef", colnames(mm), value = TRUE)
+
+      for(coef in coefs){
+        analysis_accession <- paste0("GEA", idx)
+        TP <- gsub("coef", "", coef)
+        arm_name <- unique(pData(EM)$cohort)
+        arm_accession <- cm[cohort == arm_name, arm_accession]
+        arm_name[ is.null(arm_name) ] <- NA
+        description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
 
         GEA_list[[idx]] <- data.table(analysis_accession = analysis_accession,
-                                      expression_matrix = mx,
+                                      expression_matrix = run,
                                       arm_name = arm_name,
                                       arm_accession = arm_accession,
-                                      coefficient = currTP,
+                                      coefficient = gsub("^coef", "", coef),
                                       description = description)
 
-        tt <- data.table(topTable(fit, coef = tp, number = Inf))
-        ttDE <- tt[adj.P.Val < 0.02]
+        tt <- data.table(topTable(fit, coef = coef, number = Inf))
 
-        if (nrow(ttDE) < 100) {
-          ttDE <- tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
-        }
+        tt <- if( sum(tt$adj.P.Val < 0.02) < 100 ){
+                tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
+              }else{
+                tt[adj.P.Val < 0.02]
+              }
 
-        if (nrow(ttDE) > 0) {
-          ttDE[, c("analysis_accession", "coefficient") := list(analysis_accession, currTP)]
-          GEAR_list[[idx]] <- data.table(ttDE)
+        if(nrow(tt) > 0){
+          tt[, c("analysis_accession", "coefficient") := list(analysis_accession, coef)]
+          tt[, coefficient := gsub("coef","", coefficient) ]
+          GEAR_list[[idx]] <- data.table(tt)
         }
 
         idx <- idx + 1
       }
     }else{
-      message("Run ", mx, "does not have enough subjects to perform analysis.")
+      message("Run ", run, "does not have enough subjects to perform analysis.")
     }
   }
 
