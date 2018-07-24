@@ -244,7 +244,10 @@ updateEMs <- function(sdy, runsDF){
     em <- prbEM[ !is.na(gene_symbol) & gene_symbol != "NA" ]
     sumEM <- em[ , lapply(.SD, mean), by="gene_symbol", .SDcols = grep("^BS", colnames(em)) ]
 
-    write.table(sumEM, file = paste0(dirPath, "/", nm, ".tsv.summary"), sep = "\t")
+    write.table(sumEM, file = paste0(dirPath, "/", nm, ".tsv.summary"),
+                sep = "\t",
+                row.names = FALSE,
+                quote = FALSE)
   })
   return(TRUE)
 }
@@ -269,72 +272,72 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
   labkey.url.base <- baseUrl
   contrast <- c("study_time_collected", "study_time_collected_unit")
   con <- CreateConnection(sdy)
-  con$GeneExpressionInputs()
+  con$getGEInputs()
   GEA_list <- vector("list")
   GEAR_list <- vector("list")
 
   runs <- runsDF$name[ runsDF$folder_name == sdy ]
 
   idx <- 1 # analysis accession key
-  for(run in runs){
-    print(paste0("working on run: ", run))
-    EM <- con$getGEMatrix(run, outputType = "normalized", annotation = "latest") # note params!
+  for (run in runs) {
+
+    EM <- con$getGEMatrix(matrixName = mx)
     pd <- data.table(pData(EM))
     pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
     to_drop <- unique(pd[study_time_collected <= 0, coef])
     pd <- pd[coef %in% to_drop, coef := "baseline"]
-    pd <- pd[, coef := factor(coef, levels = c("baseline",
-                                               grep("baseline",
-                                                    value = TRUE,
-                                                    invert = TRUE,
-                                                    mixedsort(unique(coef)))))]
+    tmp <- grep("baseline", value = TRUE, invert = TRUE, mixedsort(unique(pd$coef)))
+    pd <- pd[, coef := factor(coef, levels = c("baseline", tmp))] # preps coef col for use in model
+    mm <- model.matrix(formula("~participant_id + coef"), pd)
 
-    # pd$coefs are timepoints so if only 1 then can't do differential
-    if( length(unique(pd$coef)) > 1 ){
-      mm <- model.matrix(formula("~participant_id + coef"), pd)
-
-      # Check if it's RNA-seq or microarrays
-      if( max(exprs(EM)) > 100 ){ EM <- voom(EM) }
+    if(dim(mm)[[1]] > dim(mm)[[2]]){
+      # Check if it's non-normalized and use na.rm = T b/c currently allowing NAs to remain
+      # in matrices in pipeline unless normalization doesn't work (e.g. DEseq)
+      if (max(exprs(EM), na.rm = TRUE) > 100) { EM <- voom(EM) }
       fit <- lmFit(EM, mm)
-      fit <- eBayes(fit)
+      fit <- tryCatch(
+        eBayes(fit),
+        error = function(e) return(e)
+      )
 
-      # Prep for coefficients work
-      cm <- con$getDataset("cohort_membership")
-      cm <- unique( cm[, list(cohort, arm_accession)] )
-      coefs <- grep("^coef", colnames(mm), value = TRUE)
+      if( !is.null(fit$message) ){
+        message(paste0("Linear model not able to be fit for ", mx, ". Skipping to next matrix"))
+        next()
+      }
 
-      for(coef in coefs){
-        analysis_accession <- paste0("GEA", idx)
-        TP <- gsub("coef", "", coef)
-        arm_name <- unique(pData(EM)$cohort)
-        arm_accession <- cm[cohort == arm_name, arm_accession]
-        arm_name[ is.null(arm_name) ] <- NA
-        description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
+      timepoints <- grep("^coef", colnames(mm), value = TRUE)
+      for (tp in timepoints) {
+        analysis_accession <- paste0("GEA", idx )
+        currTP <- gsub("coef", "", tp)
+        arm_name <- unique(pd$cohort)
+        arm_accession <- cm[ cohort == arm_name, arm_accession ]
+        if (is.null(arm_name)){ arm_name <- NA }
+        description <- paste0("Differential expression in ",
+                              mx, ", ", currTP, " vs. baseline")
 
         GEA_list[[idx]] <- data.table(analysis_accession = analysis_accession,
-                                      expression_matrix = run,
+                                      expression_matrix = mx,
                                       arm_name = arm_name,
                                       arm_accession = arm_accession,
-                                      coefficient = gsub("^coef", "", coef),
+                                      coefficient = currTP,
                                       description = description)
 
-        tt <- data.table(topTable(fit, coef = coef, number = Inf))
+        tt <- data.table(topTable(fit, coef = tp, number = Inf))
+        ttDE <- tt[adj.P.Val < 0.02]
 
-        tt <- if( sum(tt$adj.P.Val < 0.02) < 100 ){
-                tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
-              }else{
-                tt[adj.P.Val < 0.02]
-              }
-
-        if(nrow(tt) > 0){
-          tt[, c("analysis_accession", "coefficient") := list(analysis_accession, coef)]
-          tt[, coefficient := gsub("coef","", coefficient) ]
-          GEAR_list[[idx]] <- data.table(tt)
+        if (nrow(ttDE) < 100) {
+          ttDE <- tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
         }
+
+        if (nrow(ttDE) > 0) {
+          ttDE[, c("analysis_accession", "coefficient") := list(analysis_accession, currTP)]
+          GEAR_list[[idx]] <- data.table(ttDE)
+        }
+
+        idx <- idx + 1
       }
-      idx <- idx + 1
     }else{
-      print("lengths(coefs) < 2 therefore no differential")
+      message("Run ", mx, "does not have enough subjects to perform analysis.")
     }
   }
 
