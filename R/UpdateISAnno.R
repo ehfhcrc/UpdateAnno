@@ -284,20 +284,20 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
     EM <- con$getGEMatrix(matrixName = run, outputType = "normalized", annotation = "latest")
     pd <- data.table(pData(EM))
     pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
+    if( length(unique(pd$coef)) < 2){
+      message(paste0(run, " has only one timepoint! Skipping."))
+      next()
+    }
     to_drop <- unique(pd[study_time_collected <= 0, coef])
     pd <- pd[coef %in% to_drop, coef := "baseline"]
     tmp <- grep("baseline", value = TRUE, invert = TRUE, mixedsort(unique(pd$coef)))
-    if( length(tmp) == 0 ){
-      message(paste0(run, " has no timepoints other than baseline! Skipping."))
-      next()
-    }
     pd <- pd[, coef := factor(coef, levels = c("baseline", tmp))] # preps coef col for use in model
     mm <- model.matrix(formula("~participant_id + coef"), pd)
 
     if(dim(mm)[[1]] > dim(mm)[[2]]){
       # Check if it's non-normalized and use na.rm = T b/c currently allowing NAs to remain
       # in matrices in pipeline unless normalization doesn't work (e.g. DEseq)
-      if (max(exprs(EM), na.rm = TRUE) > 100) { EM <- voom(EM) }
+      if (max(Biobase::exprs(EM), na.rm = TRUE) > 100) { EM <- voom(EM) }
       fit <- lmFit(EM, mm)
       fit <- tryCatch(
         eBayes(fit),
@@ -346,7 +346,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
         idx <- idx + 1
       }
     }else{
-      message("Run ", run, "does not have enough subjects to perform analysis.")
+      message("Run ", run, " does not have enough subjects to perform analysis.")
     }
   }
 
@@ -358,12 +358,19 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
     queryRes <- "gene_expression_analysis_results"
 
     # delete old GEA
-    currGEA <- labkey.selectRows(baseUrl = baseUrl,
+    currGEA <- tryCatch(labkey.selectRows(baseUrl = baseUrl,
                                  folderPath = folderPath,
                                  schemaName = schemaGE,
                                  queryName = queryGEA,
                                  colNameOpt = "rname",
-                                 showHidden = T)
+                                 showHidden = T),
+                        error = function(e) return(e))
+
+    if( !is.null(currGEA$message) ){
+      message(paste0("Error: ", currGEA$message))
+      stop("May need to turn on DEA module to allow gene_expression schema.")
+    }
+
     if( nrow(currGEA) != 0 ){
       deleteGEA <- labkey.deleteRows(baseUrl = baseUrl,
                                      folderPath = folderPath,
