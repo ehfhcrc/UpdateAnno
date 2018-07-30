@@ -229,6 +229,19 @@ updateEMs <- function(sdy, runsDF){
     # because it is a lookup even though it is in microarray.FeatureAnnotation.
     prbEM <- fread(file.path(dirPath, paste0(nm, ".tsv")))
     annoSetId <- runsDF$featureset[ runsDF$name == nm ]
+    currFAS <- data.table(labkey.selectRows(baseUrl = baseUrl,
+                                                   folderPath = "/Studies/",
+                                                   schemaName = "microarray",
+                                                   queryName = "FeatureAnnotationSet",
+                                                   colNameOpt = "fieldname",
+                                                   showHidden = TRUE ))
+    currAnnoNm <- currFAS$Name[ currFAS$RowId == annoSetId]
+
+    # Handle possibility that _orig anno was used to create mx (e.g. annotation
+    # updated before matrix created.)
+    if(grepl("_orig", currAnnoNm)){
+      annoSetId <- currFAS$RowId[ currFAS$Name == gsub("_orig","", currAnnoNm)]
+    }
     sqlStr <- sprintf("SELECT FeatureAnnotationSetId, FeatureId, GeneSymbol
                     from FeatureAnnotation
                     where FeatureAnnotationSetId='%s';", annoSetId)
