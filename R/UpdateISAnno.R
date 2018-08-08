@@ -283,9 +283,10 @@ updateEMs <- function(sdy, runsDF){
 updateGEAR <- function(sdy, baseUrl, runsDF){
   print(paste0("working on study: ", sdy))
   infostring <- ""
-  labkey.url.base <- baseUrl
   contrast <- c("study_time_collected", "study_time_collected_unit")
-  con <- CreateConnection(sdy)
+  labkey.url.base <- baseUrl
+  labkey.url.path <- paste0("/Studies/", sdy)
+  con <- CreateConnection()
   con$getGEInputs()
   GEA_list <- vector("list")
   GEAR_list <- vector("list")
