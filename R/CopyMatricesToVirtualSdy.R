@@ -24,12 +24,20 @@ for(i in 1:nrow(runs)){
   mxPathOnSdy <- paste0(root, x$Study, mid, x$Name, ".tsv")
   mxPathOnVirt <- paste0(vPath, "Run", x$`Row Id`, "/", x$Name, ".tsv")
 
+  # the latest / normalized .tsv are not same?
+  file.copy(from = mxPathOnSdy,
+            to = mxPathOnVirt,
+            overwrite = TRUE)
+
   file.copy(from = paste0(mxPathOnSdy, ".raw"),
-            to = paste0(mxPathOnVirt, ".raw"))
+            to = paste0(mxPathOnVirt, ".raw"),
+            overwrite = FALSE)
 
   file.copy(from = paste0(mxPathOnSdy, ".summary"),
-            to = paste0(mxPathOnVirt, ".summary"))
+            to = paste0(mxPathOnVirt, ".summary"),
+            overwrite = FALSE)
 
   file.copy(from = paste0(mxPathOnSdy, ".summary.orig"),
-            to = paste0(mxPathOnVirt, ".summary.orig"))
+            to = paste0(mxPathOnVirt, ".summary.orig"),
+            overwrite = FALSE)
 }
