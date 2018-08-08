@@ -336,6 +336,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
         tt <- data.table(topTable(fit, coef = coef, number = Inf))
         if(all(is.na(tt$adj.P.Val))){
           message(paste0(coef, " has all NA values for adj.P.Val. Skipping to next coef."))
+          next()
         }
 
         analysis_accession <- paste0("GEA", idx)
