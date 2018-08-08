@@ -201,6 +201,7 @@ updateEMs <- function(sdy, runsDF){
   tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
   baseNms <- tmp[ !(tmp %in% c(".summary",".summary.orig", ".raw", ".immsig")) ]
 
+  # checks
   if(!all(baseNms %in% runsDF$name)){
     baseNms <- baseNms[ baseNms %in% runsDF$name]
     warning("Extra files / basenames present in current study.  Please delete.")
