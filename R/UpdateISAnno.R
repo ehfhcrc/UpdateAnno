@@ -331,12 +331,20 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
       coefs <- grep("^coef", colnames(mm), value = TRUE)
 
       for(coef in coefs){
+
+        # Check that coef can be used
+        tt <- data.table(topTable(fit, coef = coef, number = Inf))
+        if(all(is.na(tt$adj.P.Val))){
+          message(paste0(coef, " has all NA values for adj.P.Val. Skipping to next coef."))
+        }
+
         analysis_accession <- paste0("GEA", idx)
         TP <- gsub("coef", "", coef)
         arm_name <- unique(pData(EM)$cohort)
         arm_accession <- cm[cohort == arm_name, arm_accession]
         arm_name[ is.null(arm_name) ] <- NA
         description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
+
 
         GEA_list[[idx]] <- data.table(analysis_accession = analysis_accession,
                                       expression_matrix = run,
@@ -345,9 +353,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
                                       coefficient = gsub("^coef", "", coef),
                                       description = description)
 
-        tt <- data.table(topTable(fit, coef = coef, number = Inf))
-
-        tt <- if( sum(tt$adj.P.Val < 0.02) < 100 ){
+        tt <- if( sum(tt$adj.P.Val < 0.02, na.rm = T) < 100 ){
                 tt[order(adj.P.Val)][1:min(nrow(tt), 100)]
               }else{
                 tt[adj.P.Val < 0.02]
