@@ -286,7 +286,8 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
   contrast <- c("study_time_collected", "study_time_collected_unit")
   labkey.url.base <- baseUrl
   labkey.url.path <- paste0("/Studies/", sdy)
-  con <- CreateConnection()
+  # can't use CreateConnection() b/c lup/lub not in global env
+  con <- CreateConnection(study = sdy, onTest = grepl("test", baseUrl))
   con$getGEInputs()
   GEA_list <- vector("list")
   GEAR_list <- vector("list")
