@@ -14,13 +14,13 @@ copyMatricesToVirtualSdy <- function(baseUrl, virtualSdy){
   studies <- strsplit(studies, ", ")[[1]]
   runs <- runs[ runs$Study %in% studies, ]
 
-  # for each run cp over the .tsv.raw, .tsv.summary, .tsv.summary.orig files
+  # for each run cp over the normalized tsv only // 08.09.18 - will change and be unnecessary
   root <- "/share/files/Studies/"
   mid <- "/@files/analysis/exprs_matrices/"
 
   vPath <- paste0("/share/files/HIPC/", virtualSdy, "/@files/analysis/exprs_matrices/")
   for(i in 1:nrow(runs)){
-    x <- runs[i, ]
+    x <- runs[i, ]$Name
     print(x)
 
     mxPathOnSdy <- paste0(root, x$Study, mid, x$Name, ".tsv")
@@ -31,17 +31,25 @@ copyMatricesToVirtualSdy <- function(baseUrl, virtualSdy){
               to = mxPathOnVirt,
               overwrite = TRUE)
 
-    file.copy(from = paste0(mxPathOnSdy, ".raw"),
-              to = paste0(mxPathOnVirt, ".raw"),
-              overwrite = FALSE)
+    # if IS1
+    if(virtualSdy == "IS1"){
+      file.copy(from = paste0(mxPathOnSdy, ".immsig"),
+                to = paste0(mxPathOnVirt, ".immsig"),
+                overwrite = FALSE)
+    }
 
-    file.copy(from = paste0(mxPathOnSdy, ".summary"),
-              to = paste0(mxPathOnVirt, ".summary"),
-              overwrite = FALSE)
 
-    file.copy(from = paste0(mxPathOnSdy, ".summary.orig"),
-              to = paste0(mxPathOnVirt, ".summary.orig"),
-              overwrite = FALSE)
+    # file.copy(from = paste0(mxPathOnSdy, ".raw"),
+    #           to = paste0(mxPathOnVirt, ".raw"),
+    #           overwrite = FALSE)
+    #
+    # file.copy(from = paste0(mxPathOnSdy, ".summary"),
+    #           to = paste0(mxPathOnVirt, ".summary"),
+    #           overwrite = FALSE)
+    #
+    # file.copy(from = paste0(mxPathOnSdy, ".summary.orig"),
+    #           to = paste0(mxPathOnVirt, ".summary.orig"),
+    #           overwrite = FALSE)
   }
 }
 
