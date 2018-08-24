@@ -2,21 +2,18 @@
 #'
 #' @param ISserver immunespace server, either test or prod
 #' @param virtualSdy subdirectory within HIPC container
+#' @param fasGrep grep statement to use in subsetting FAS to add just a few new sets
 #' @import Rlabkey
 #' @export
 #'
 
 # Main Method
-addAnnoToVirtualSdy <- function(ISserver, virtualSdy){
+addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL){
 
     # Convert server to baseUrl
-    if(ISserver == "test"){
-      baseUrl <- "https://test.immunespace.org"
-    }else if(ISserver == "prod"){
-      baseUrl <- "https://www.immunespace.org"
-    }else{
-      stop("server name not recognized. Must be `test` or `prod`.")
-    }
+    baseUrl <- ifelse( ISserver == "prod",
+                     "https://www.immunespace.org",
+                     "https://test.immunespace.org")
 
     # Path assumed to be from HIPC directory
     vSdyPath <- paste0("/HIPC/", virtualSdy)
@@ -28,6 +25,7 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy){
                              queryName = "FeatureAnnotationSet",
                              colNameOpt = "fieldname",
                              showHidden = T)
+    fas <- fas[ grep(fasGrep, fas$Name), ]
     fas <- fas[ order(fas$RowId), ]
     toImport <- data.frame(fas, stringsAsFactors = F)
     toImport[is.na(toImport)] <- ""
@@ -57,6 +55,7 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy){
                                 colNameOpt = "fieldname",
                                 showHidden = T)
     fas <- fas[ order(fas$Name), ]
+    newFas <- newFas[ grep(fasGrep, newFas$Name), ]
     newFas <- newFas[ order(newFas$Name), ]
 
     if(!all.equal(fas$Name, newFas$Name)){
@@ -69,12 +68,14 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy){
 
     # Update the featureAnnotation and Import
     # NOTE: colSelect "all" option aka "*" used in order to get FASid
+    fasIdFilt <- makeFilter(c('FeatureAnnotationSetId', 'IN', paste(fas$RowId, collapse = ';')))
     fa <- labkey.selectRows(baseUrl = baseUrl,
                             folderPath = "/Studies/",
                             schemaName = "microarray",
                             queryName = "FeatureAnnotation",
                             colNameOpt = "fieldname",
                             colSelect = "*",
+                            colFilter = fasIdFilt,
                             showHidden = T)
     newFa <- fa[ , colnames(fa) %in% c("Container","FeatureAnnotationSetId", "FeatureId", "GeneSymbol")]
     newFa$Container <- unique(toImport$Container)

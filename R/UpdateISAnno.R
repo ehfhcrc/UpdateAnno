@@ -25,6 +25,7 @@
 
 # NOTE: Main Script @ bottom of page
 #' @import Rlabkey
+#' @import data.table
 #' @import org.Hs.eg.db
 #' @import ImmuneSpaceR
 #' @import limma
@@ -43,10 +44,9 @@
 # populating the probe level gene symbols with the arg: `annotation = "default"`.
 
 #' @export updateFAS
-updateFAS <- function(baseUrl){
+updateFAS <- function(baseUrl, folderPath = "/Studies/"){
 
   # vars ---------------------------------------------------
-  folderPath <- "/Studies/"
   schemaName <- "Microarray"
 
   # helper fn ----------------------------------------------
@@ -190,13 +190,14 @@ updateFAS <- function(baseUrl){
 
 
 #' @export updateEMs
-updateEMs <- function(sdy, runsDF){
+updateEMs <- function(sdy, runsDF, folderPath = "/Studies/"){
   print(paste0("working on study: ", sdy))
 
   # get file basenames present on server
-  dirPath <- file.path("/share/files/Studies",
-                       sdy,
-                       "@files/analysis/exprs_matrices")
+  sdyPath <- ifelse( folderPath == "/Studies/",
+                     paste0(folderPath, sdy),
+                     folderPath)
+  dirPath <- paste0("/share/files", sdyPath, "/@files/analysis/exprs_matrices")
   fls <- list.files(dirPath)
   tmp <- unique(unlist(strsplit(fls, split = ".tsv", fixed = TRUE)))
   baseNms <- tmp[ !(tmp %in% c(".summary",".summary.orig", ".raw", ".immsig")) ]
@@ -279,13 +280,16 @@ updateEMs <- function(sdy, runsDF){
 
 # This method is based on the DEA.Rmd found in the DEA module
 
+
 #' @export updateGEAR
-updateGEAR <- function(sdy, baseUrl, runsDF){
+updateGEAR <- function(sdy, baseUrl, runsDF, folderPath = "/Studies/"){
   print(paste0("working on study: ", sdy))
   infostring <- ""
   contrast <- c("study_time_collected", "study_time_collected_unit")
   labkey.url.base <- baseUrl
-  labkey.url.path <- paste0("/Studies/", sdy)
+  labkey.url.path <- ifelse( folderPath == "/Studies",
+                             paste0(folderPath, sdy),
+                             folderPath )
 
   # can't use CreateConnection() b/c lup/lub not in global env
   con <- CreateConnection(study = sdy, onTest = grepl("test", baseUrl))
@@ -499,7 +503,13 @@ updateGEAR <- function(sdy, baseUrl, runsDF){
 #######################################################################
 
 #' @export runUpdateAnno
-runUpdateAnno <- function(baseUrl){
+runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
+
+  # NOTES: expects folderPath for ISx studies of "/Studies/ISx/"
+  baseUrl <- ifelse( ISserver == "prod",
+                     "https://www.immunespace.org",
+                     "https://test.immunespace.org")
+
   # Double-check whether to run on test or prod
   chk <- readline(prompt = paste0("You are running on ",
                                   baseUrl,
@@ -508,9 +518,8 @@ runUpdateAnno <- function(baseUrl){
   if( !(chk %in% c("", "t", "T")) ){ return("Operations ended.") }
 
   # Update the secondary / updated FeatureAnnotation set
-  updateFAS(baseUrl)
+  updateFAS(baseUrl, folderPath)
 
-  folderPath <- "/Studies/"
   # Get studies with gene expression matrices
   runsDF <- labkey.selectRows(baseUrl = baseUrl,
                               folderPath = folderPath,
@@ -518,8 +527,12 @@ runUpdateAnno <- function(baseUrl){
                               queryName = "Runs",
                               colNameOpt = "rname")
   sdys <- unique(runsDF$folder_name)
-  lapply(sdys, updateEMs, runsDF = runsDF) # update flat files for summary only
-  lapply(sdys, updateGEAR, baseUrl = baseUrl, runsDF = runsDF) # using con$getGEMatrix(outputType = "normalized", annotation = "latest")
+
+  # update flat files for summary only
+  lapply(sdys, updateEMs, runsDF = runsDF, folderPath = folderPath)
+
+  # using con$getGEMatrix(outputType = "normalized", annotation = "latest")
+  lapply(sdys, updateGEAR, baseUrl = baseUrl, runsDF = runsDF, folderPath = folderPath)
 }
 
 

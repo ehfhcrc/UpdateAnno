@@ -1,5 +1,10 @@
-copyMatricesToVirtualSdy <- function(baseUrl, virtualSdy){
+copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
   library(Rlabkey)
+
+  baseUrl <- ifelse( ISserver == "prod",
+                     "https://www.immunespace.org",
+                     "https://test.immunespace.org")
+
   runs <- labkey.selectRows(baseUrl = baseUrl,
                             folderPath = "/Studies/",
                             schemaName = "assay.ExpressionMatrix.matrix",
@@ -12,19 +17,29 @@ copyMatricesToVirtualSdy <- function(baseUrl, virtualSdy){
   vSdyList[["IS1"]]  <- c("SDY63","SDY67","SDY80","SDY212","SDY400","SDY404")
   studies <- vSdyList[[virtualSdy]]
   studies <- strsplit(studies, ", ")[[1]]
-  runs <- runs[ runs$Study %in% studies, ]
+  sdy67 <- runs[ runs$Study == "SDY67", ]
+  sdy67 <- sdy67[ grep("(B|b)atch", sdy67$Name, invert = virtualSdy != "IS1"), ]
+  runs <- runs[ runs$Study %in% studies & runs$Study != "SDY67", ]
+  runs <- rbind(sdy67, runs)
 
   # for each run cp over the normalized tsv only // 08.09.18 - will change and be unnecessary
   root <- "/share/files/Studies/"
   mid <- "/@files/analysis/exprs_matrices/"
 
   vPath <- paste0("/share/files/HIPC/", virtualSdy, "/@files/analysis/exprs_matrices/")
+
   for(i in 1:nrow(runs)){
-    x <- runs[i, ]$Name
-    print(x)
+    x <- runs[i, ]
+
+    # Check if there is a
 
     mxPathOnSdy <- paste0(root, x$Study, mid, x$Name, ".tsv")
-    mxPathOnVirt <- paste0(vPath, "Run", x$`Row Id`, "/", x$Name, ".tsv")
+    runDir <- paste0(vPath, "Run", x$`Row Id`)
+    mxPathOnVirt <- paste0(runDir, "/", x$Name, ".tsv")
+
+    if (!dir.exists(runDir) ) {
+      dir.create(runDir)
+    }
 
     # the latest / normalized .tsv are not same?
     file.copy(from = mxPathOnSdy,
@@ -38,18 +53,18 @@ copyMatricesToVirtualSdy <- function(baseUrl, virtualSdy){
                 overwrite = FALSE)
     }
 
+    file.copy(from = paste0(mxPathOnSdy, ".raw"),
+              to = paste0(mxPathOnVirt, ".raw"),
+              overwrite = FALSE)
 
-    # file.copy(from = paste0(mxPathOnSdy, ".raw"),
-    #           to = paste0(mxPathOnVirt, ".raw"),
-    #           overwrite = FALSE)
-    #
-    # file.copy(from = paste0(mxPathOnSdy, ".summary"),
-    #           to = paste0(mxPathOnVirt, ".summary"),
-    #           overwrite = FALSE)
-    #
-    # file.copy(from = paste0(mxPathOnSdy, ".summary.orig"),
-    #           to = paste0(mxPathOnVirt, ".summary.orig"),
-    #           overwrite = FALSE)
+    file.copy(from = paste0(mxPathOnSdy, ".summary"),
+              to = paste0(mxPathOnVirt, ".summary"),
+              overwrite = FALSE)
+
+    file.copy(from = paste0(mxPathOnSdy, ".summary.orig"),
+              to = paste0(mxPathOnVirt, ".summary.orig"),
+              overwrite = FALSE)
   }
 }
+
 
