@@ -1,6 +1,13 @@
-copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
-  library(Rlabkey)
+#' Function to migrate a copy of EMs from /Studies/ to a virtual study container
+#'
+#' @param ISserver immunespace server, either test or prod
+#' @param virtualSdy subdirectory within HIPC container
+#' @import Rlabkey
+#' @export
+#'
 
+# Main Method
+copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
   baseUrl <- ifelse( ISserver == "prod",
                      "https://www.immunespace.org",
                      "https://test.immunespace.org")

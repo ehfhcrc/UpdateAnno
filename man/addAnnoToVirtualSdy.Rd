@@ -4,12 +4,14 @@
 \alias{addAnnoToVirtualSdy}
 \title{Function to migrate a copy of FA / FAS from /Studies/ to a virtual study container}
 \usage{
-addAnnoToVirtualSdy(ISserver, virtualSdy)
+addAnnoToVirtualSdy(ISserver, virtualSdy, fasGrep = NULL)
 }
 \arguments{
 \item{ISserver}{immunespace server, either test or prod}
 
 \item{virtualSdy}{subdirectory within HIPC container}
+
+\item{fasGrep}{grep statement to use in subsetting FAS to add just a few new sets}
 }
 \description{
 Function to migrate a copy of FA / FAS from /Studies/ to a virtual study container
