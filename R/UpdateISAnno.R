@@ -282,20 +282,17 @@ updateEMs <- function(sdy, runsDF, folderPath = "/Studies/"){
 
 
 #' @export updateGEAR
-updateGEAR <- function(sdy, baseUrl, runsDF, folderPath = "/Studies/"){
-  print(paste0("working on study: ", sdy))
-  infostring <- ""
-  contrast <- c("study_time_collected", "study_time_collected_unit")
-  labkey.url.base <- baseUrl
-  labkey.url.path <- ifelse( folderPath == "/Studies",
-                             paste0(folderPath, sdy),
-                             folderPath )
+updateGEAR <- function(sdy, baseUrl){
+
+  # NOT designed for use in HIPC-ISx studies!
 
   # can't use CreateConnection() b/c lup/lub not in global env
+  # since being run within a function
   con <- CreateConnection(study = sdy, onTest = grepl("test", baseUrl))
   con$getGEInputs()
-
+  contrast <- c("study_time_collected", "study_time_collected_unit")
   coefs <- unique(con$cache$GE_inputs[, c("arm_name", contrast), with = FALSE])
+
   if( !any(coefs$study_time_collected <= 0) ){
     message("No baseline timepoints available in any cohort. Analysis not run.")
     return()
@@ -309,7 +306,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF, folderPath = "/Studies/"){
   GEA_list <- vector("list")
   GEAR_list <- vector("list")
 
-  runs <- runsDF$name[ runsDF$folder_name == sdy ]
+  runs <- con$cache$GE_matrices$name
 
   idx <- 1 # analysis accession key
   for (run in runs) {
@@ -392,7 +389,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF, folderPath = "/Studies/"){
 
   if( length(GEA_list) > 0 ){
     # Set HTTP call vars
-    folderPath <- con$config$labkey.url.path
+    folderPath <- con$config$labkey.url.path # must be sdy-specific
     schemaGE <- "gene_expression"
     queryGEA <- "gene_expression_analysis"
     queryRes <- "gene_expression_analysis_results"
@@ -477,7 +474,7 @@ updateGEAR <- function(sdy, baseUrl, runsDF, folderPath = "/Studies/"){
                                    toImport = toImport)
     }
   }
-  return(TRUE)
+  return(newGEA)
 }
 
 #######################################################################
@@ -505,7 +502,8 @@ updateGEAR <- function(sdy, baseUrl, runsDF, folderPath = "/Studies/"){
 #' @export runUpdateAnno
 runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
 
-  # NOTES: expects folderPath for ISx studies of "/Studies/ISx/"
+  # NOTES: expects folderPath for ISx studies of "/HIPC/ISx/"
+
   baseUrl <- ifelse( ISserver == "prod",
                      "https://www.immunespace.org",
                      "https://test.immunespace.org")
@@ -532,7 +530,7 @@ runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
   lapply(sdys, updateEMs, runsDF = runsDF, folderPath = folderPath)
 
   # using con$getGEMatrix(outputType = "normalized", annotation = "latest")
-  lapply(sdys, updateGEAR, baseUrl = baseUrl, runsDF = runsDF, folderPath = folderPath)
+  dmp <- lapply(sdys, updateGEAR, baseUrl = baseUrl)
 }
 
 
