@@ -307,6 +307,7 @@ updateGEAR <- function(sdy, baseUrl){
   GEAR_list <- vector("list")
 
   runs <- con$cache$GE_matrices$name
+  gef <- con$getDataset("gene_expression_files", original_view = T)
 
   idx <- 1 # analysis accession key
   for (run in runs) {
@@ -344,6 +345,10 @@ updateGEAR <- function(sdy, baseUrl){
       cm <- unique( cm[, list(cohort, arm_accession)] )
       coefs <- grep("^coef", colnames(mm), value = TRUE)
 
+      # create cohort_type identifier so unique to runs, which are cohort * cell_type
+      gefSub <- gef[ gef$biosample_accession %in% pd$biosample_accession, ]
+      cohort_type <- unique(paste(gefSub$cohort, gefSub$type, sep = "_"))
+
       for(coef in coefs){
 
         # Check that coef can be used
@@ -355,15 +360,14 @@ updateGEAR <- function(sdy, baseUrl){
 
         analysis_accession <- paste0("GEA", idx)
         TP <- gsub("coef", "", coef)
-        arm_name <- unique(pData(EM)$cohort)
-        arm_accession <- cm[cohort == arm_name, arm_accession]
-        arm_name[ is.null(arm_name) ] <- NA
+        arm_accession <- cm[cohort == unique(pData(EM)$cohort), arm_accession]
+        # arm_name[ is.null(arm_name) ] <- NA
         description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
 
 
         GEA_list[[idx]] <- data.table(analysis_accession = analysis_accession,
                                       expression_matrix = run,
-                                      arm_name = arm_name,
+                                      arm_name = cohort_type,
                                       arm_accession = arm_accession,
                                       coefficient = gsub("^coef", "", coef),
                                       description = description)
