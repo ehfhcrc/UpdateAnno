@@ -328,7 +328,7 @@ updateGEAR <- function(sdy, baseUrl){
     if(dim(mm)[[1]] > dim(mm)[[2]]){
       # Check if it's non-normalized and use na.rm = T b/c currently allowing NAs to remain
       # in matrices in pipeline unless normalization doesn't work (e.g. DEseq)
-      if (max(Biobase::exprs(EM), na.rm = TRUE) > 100) {
+      if (max(Biobase::exprs(ES), na.rm = TRUE) > 100) {
         EM <- voom(ES)
       }else{
         EM <- ES
