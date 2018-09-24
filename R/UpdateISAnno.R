@@ -312,8 +312,8 @@ updateGEAR <- function(sdy, baseUrl){
   idx <- 1 # analysis accession key
   for (run in runs) {
 
-    EM <- con$getGEMatrix(matrixName = run, outputType = "normalized", annotation = "latest")
-    pd <- data.table(pData(EM))
+    ES <- con$getGEMatrix(matrixName = run, outputType = "normalized", annotation = "latest")
+    pd <- data.table(pData(ES))
     pd <- pd[, coef := do.call(paste, .SD), .SDcols = contrast]
     if( length(unique(pd$coef)) < 2){
       message(paste0(run, " has only one timepoint! Skipping."))
@@ -328,7 +328,11 @@ updateGEAR <- function(sdy, baseUrl){
     if(dim(mm)[[1]] > dim(mm)[[2]]){
       # Check if it's non-normalized and use na.rm = T b/c currently allowing NAs to remain
       # in matrices in pipeline unless normalization doesn't work (e.g. DEseq)
-      if (max(Biobase::exprs(EM), na.rm = TRUE) > 100) { EM <- voom(EM) }
+      if (max(Biobase::exprs(EM), na.rm = TRUE) > 100) {
+        EM <- voom(ES)
+      }else{
+        EM <- ES
+      }
       fit <- lmFit(EM, mm)
       fit <- tryCatch(
         eBayes(fit),
@@ -360,7 +364,7 @@ updateGEAR <- function(sdy, baseUrl){
 
         analysis_accession <- paste0("GEA", idx)
         TP <- gsub("coef", "", coef)
-        arm_accession <- cm[cohort == unique(pData(EM)$cohort), arm_accession]
+        arm_accession <- cm[cohort == unique(pData(ES)$cohort), arm_accession]
         # arm_name[ is.null(arm_name) ] <- NA
         description <- paste0("Differential expression in ", run, ", ", TP, " vs. baseline")
 
