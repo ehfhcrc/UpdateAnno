@@ -1,47 +1,55 @@
 # Evan Henrich
-# July 2018
-# Notes: SDY1264 is a study done by Bali Pulendran at Stanford and used in the ImmuneSignatures2 project.
-# Because HIPC collaborators only uploaded a GEF using GEO accessions, the annotation came from notes in GEO
-# see - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL7567.
-# At issue is that about 1/4 of the probes / unigene values are not mapped to official gene symbols.
+# Sep 2018
 
-library(org.Hs.eg.db)
-library(data.table)
+library(ImmuneSpaceR)
+con <- CreateConnection("SDY224", onTest = T)
+gef <- con$getDataset("gene_expression_files")
+gef <- gef[ gef$type == "PBMC", ]
 
-# get unigene from norm_exprs by cutting off suffix of probes
-em <- data.table::fread("FeatureAnnotationSetDev/SDY1264_Trial1.tsv")
-unigenes <- gsub("_at", "", em$feature_id)
+library(GEOquery)
+map <- lapply(gef$geo_accession, function(x){
+  tmp <- getGEO(x)
+  nm <- tmp@header$title
+  nm <- gsub(" \\[(PBMC|Bcell)\\]", "", nm)
+  return(c(x,nm))
+})
+map <- data.frame(t(data.frame(map)))
+colnames(map) <- c("gsm","id")
 
-# Get unigene-2-symbol map from org.Hs.eg.db
-std <- suppressMessages(data.table(AnnotationDbi::select(org.Hs.eg.db,
-                                                         keys = AnnotationDbi::keys(org.Hs.eg.db,
-                                                                                    keytype = "SYMBOL"),
-                                                         columns = c("UNIGENE", "SYMBOL"),
-                                                         keytype = "SYMBOL")))
-syms <- std$SYMBOL[ match(unigenes, std$UNIGENE)]
+# Get raw data from series matrix assuming named 'non-normalized.txt.gz' or 'raw.corrected.txt.gz'
+baseDir <- paste0("/home/ehenrich/R/Gen_Test")
+dir.create(baseDir)
+gsm <- getGEO(gef[1, geo_accession])
+gseList <- gsm@header$series_id
+gseList <- gseList[ grepl("GSE45735", gseList)]
+fls <- getGEOSuppFiles(gseList, makeDirectory = FALSE, baseDir = baseDir)
+fls <- rownames(fls)
+nms <- paste0("T", sub(".*T([0-9]+).*", "\\1", fls))
+ems <- lapply(seq(1:length(fls)), function(x){
+  flPath <- fls[[x]]
+  nm <- nms[[x]]
+  GEOquery::gunzip(flPath, overwrite = TRUE)
+  flPath <- gsub(".gz", "", flPath)
+  exprs <- data.table::fread(flPath, header = T)
+  tmp <- colnames(exprs)[ grep("Gene", colnames(exprs), invert = T)]
+  tmp <- paste0(nm, "_Day", tmp)
+  colnames(exprs) <- c("Gene", tmp)
+  colnames(exprs) <- as.character(map$gsm[ match(colnames(exprs), map$id)])
+  colnames(exprs)[[1]] <- "feature_id"
+  return(exprs)
+})
+exprs <- Reduce(function(x,y){ merge(x,y, by="feature_id", all=T)}, ems)
+exprs <- exprs[ complete.cases(exprs)]
 
-# Remove unmapped
-res <- data.frame(Probe_ID = em$feature_id,
-                  Gene_Symbol = syms,
+res <- data.frame(Probe_ID = exprs$feature_id,
+                  Gene_Symbol = exprs$feature_id,
                   stringsAsFactors = F)
 res <- res[ !is.na(res$Gene_Symbol), ]
+res <- res[ !duplicated(res$Probe_ID), ]
 
 # Write out
 write.table(res,
-              file = "FeatureAnnotationSetDev/SDY1264_customAnno.tsv",
-              quote = FALSE,
-              sep = "\t",
-              row.names = FALSE)
-
-# Remove unmapped
-res <- data.frame(Probe_ID = std$UNIGENE,
-                  Gene_Symbol = std$SYMBOL,
-                  stringsAsFactors = F)
-res <- res[ !is.na(res$Gene_Symbol), ]
-
-# Write out
-write.table(res,
-            file = "FeatureAnnotationSetDev/unigene2symbol.tsv",
+            file = "FeatureAnnotationSetDev/SDY224_CustomAnno.tsv",
             quote = FALSE,
             sep = "\t",
             row.names = FALSE)

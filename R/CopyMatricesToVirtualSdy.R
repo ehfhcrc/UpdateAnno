@@ -62,21 +62,21 @@ copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
 
     file.copy(from = paste0(mxPathOnSdy, ".raw"),
               to = paste0(mxPathOnVirt, ".raw"),
-              overwrite = FALSE)
+              overwrite = TRUE)
 
     file.copy(from = paste0(mxPathOnSdy, ".summary"),
               to = paste0(mxPathOnVirt, ".summary"),
-              overwrite = FALSE)
+              overwrite = TRUE)
 
     file.copy(from = paste0(mxPathOnSdy, ".summary.orig"),
               to = paste0(mxPathOnVirt, ".summary.orig"),
-              overwrite = FALSE)
+              overwrite = TRUE)
 
-    # RM any files without .tsv (due to deprecated create-matrix.xml)
-    fls <- list.files(runDir)
-    rmFls <- fls[ grep("tsv|xml", fls, invert = T)]
-    rmFls <- file.path(runDir, rmFls)
-    done <- sapply(rmFls, file.remove)
+    # # RM any files without .tsv (due to deprecated create-matrix.xml)
+    # fls <- list.files(runDir)
+    # rmFls <- fls[ grep("tsv|xml", fls, invert = T)]
+    # rmFls <- file.path(runDir, rmFls)
+    # done <- sapply(rmFls, file.remove)
   }
 }
 
