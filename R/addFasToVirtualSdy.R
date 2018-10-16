@@ -25,7 +25,9 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL){
                              queryName = "FeatureAnnotationSet",
                              colNameOpt = "fieldname",
                              showHidden = T)
-    fas <- fas[ grep(fasGrep, fas$Name), ]
+    if (!is.null(fasGrep)) {
+      fas <- fas[ grep(fasGrep, fas$Name), ]
+    }
     fas <- fas[ order(fas$RowId), ]
     toImport <- data.frame(fas, stringsAsFactors = F)
     toImport[is.na(toImport)] <- ""
@@ -54,11 +56,12 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL){
                                 queryName = "FeatureAnnotationSet",
                                 colNameOpt = "fieldname",
                                 showHidden = T)
-    fas <- fas[ order(fas$Name), ]
-    newFas <- newFas[ grep(fasGrep, newFas$Name), ]
-    newFas <- newFas[ order(newFas$Name), ]
+    if (!is.null(fasGrep)) {
+      newFas <- newFas[ grep(fasGrep, newFas$Name), ]
+    }
+    newFas <- newFas[ order(match(newFas$Name, fas$Name)), ]
 
-    if(!all.equal(fas$Name, newFas$Name)){
+    if (!all(fas$Name == newFas$Name)) {
       stop("Imported FAS is not the same as /Studies/. Please fix.")
     }
 
