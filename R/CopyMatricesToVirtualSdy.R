@@ -20,7 +20,7 @@ copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
 
   # subset to those in vSdy
   vSdyList <- list()
-  vSdyList[["IS2"]] <- c("SDY56, SDY61, SDY63, SDY67, SDY80, SDY180, SDY212, SDY224, SDY269, SDY270, SDY400, SDY404, SDY520, SDY984, SDY1260, SDY1264, SDY1276, SDY1289, SDY1293")
+  vSdyList[["IS2"]] <- c("SDY56, SDY61, SDY63, SDY67, SDY80, SDY180, SDY212, SDY224, SDY269, SDY270, SDY400, SDY404, SDY520, SDY984, SDY1260, SDY1264, SDY1276, SDY1289, SDY1291, SDY1293, SDY1325, SDY1364, SDY1373")
   vSdyList[["IS1"]]  <- c("SDY63, SDY67, SDY80, SDY212, SDY400, SDY404")
   studies <- vSdyList[[virtualSdy]]
   studies <- strsplit(studies, ", ")[[1]]
