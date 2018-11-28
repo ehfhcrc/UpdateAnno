@@ -17,8 +17,7 @@ biocViews: Visualization
 Depends: R (>= 2.10)
 Suggests: knitr,
     rmarkdown,
-    GSEABase,
-    org.Hs.eg.db,
+    GSEABase
 Imports: plyr,
     data.table,
     devtools,
@@ -26,6 +25,7 @@ Imports: plyr,
     ImmuneSpaceR,
     gtools,
     limma,
-    Biobase
+    Biobase,
+    org.Hs.eg.db
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
