@@ -566,7 +566,7 @@ quickEMUpdate <- function(studies, onTest = TRUE){
                               colNameOpt = "rname")
 
   # update flat files for summary only
-  lapply(studies, updateEMs, runsDF = runsDF, folderPath = "/Studies")
+  lapply(studies, updateEMs, runsDF = runsDF, folderPath = "/Studies/")
 }
 
 # Use to update a few Feature Annotation Sets
