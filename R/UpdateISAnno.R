@@ -44,7 +44,7 @@
 # populating the probe level gene symbols with the arg: `annotation = "default"`.
 
 #' @export updateFAS
-updateFAS <- function(baseUrl, folderPath = "/Studies/"){
+updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
 
   # vars ---------------------------------------------------
   schemaName <- "Microarray"
@@ -80,8 +80,11 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/"){
   # updated version if there is one or create one if there is not. Exceptions are those
   # with "Do Not Update", "non-updatable" or similar string in the Comment column.
   currFAS <- currFas(baseUrl)
-  fasNms <- currFAS$Name[ grep("[N|n]o[n|t|][-| ][u|U]pdat[e|able]",
-                               currFAS$Comment, invert = T) ]
+
+  if (is.null(fasNms)) {
+    fasNms <- currFAS$Name[ grep("[N|n]o[n|t|][-| ][u|U]pdat[e|able]",
+                                 currFAS$Comment, invert = T) ]
+  }
 
   lapply(fasNms, FUN = function(nm){
     message(paste0("Updating: ", nm))
@@ -504,7 +507,7 @@ updateGEAR <- function(sdy, baseUrl){
 #          func_rnames <- baylor_rnames})
 
 #######################################################################
-###                         MAIN SCRIPT                             ###
+###                         FULL UPDATE                             ###
 #######################################################################
 
 #' @export runUpdateAnno
@@ -541,4 +544,42 @@ runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
   dmp <- lapply(sdys, updateGEAR, baseUrl = baseUrl)
 }
 
+#######################################################################
+###                         QUICK UPDATES                           ###
+#######################################################################
+
+# Use to update a few studies' Summary Expression Matrices
+#' @export quickEMUpdate
+quickEMUpdate <- function(studies, onTest = TRUE){
+
+  # NOTES: expects folderPath for ISx studies of "/HIPC/ISx/"
+
+  baseUrl <- ifelse( onTest == FALSE,
+                     "https://www.immunespace.org",
+                     "https://test.immunespace.org")
+
+  # Get studies with gene expression matrices
+  runsDF <- labkey.selectRows(baseUrl = baseUrl,
+                              folderPath = "/Studies/",
+                              schemaName = "assay.ExpressionMatrix.matrix",
+                              queryName = "Runs",
+                              colNameOpt = "rname")
+
+  # update flat files for summary only
+  lapply(studies, updateEMs, runsDF = runsDF, folderPath = "/Studies")
+}
+
+# Use to update a few Feature Annotation Sets
+#' @export quickFASUpdate
+quickFASUpdate <- function(fasNms, folderPath = "/Studies/", onTest = TRUE){
+
+  # NOTES: expects folderPath for ISx studies of "/HIPC/ISx/"
+
+  baseUrl <- ifelse( onTest == FALSE,
+                     "https://www.immunespace.org",
+                     "https://test.immunespace.org")
+
+  # Update the secondary / updated FeatureAnnotation set
+  updateFAS(baseUrl, folderPath, fasNms)
+}
 
