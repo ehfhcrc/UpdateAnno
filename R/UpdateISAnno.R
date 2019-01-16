@@ -549,10 +549,9 @@ runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
 #######################################################################
 
 # Use to update a few studies' Summary Expression Matrices
+#' @import Rlabkey
 #' @export quickEMUpdate
 quickEMUpdate <- function(studies, onTest = TRUE){
-
-  # NOTES: expects folderPath for ISx studies of "/HIPC/ISx/"
   baseUrl <- ifelse( onTest == FALSE,
                      "https://www.immunespace.org",
                      "https://test.immunespace.org")
