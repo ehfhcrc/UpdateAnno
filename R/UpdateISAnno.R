@@ -193,7 +193,7 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
 
 
 #' @export updateEMs
-updateEMs <- function(sdy, runsDF, folderPath = "/Studies/"){
+updateEMs <- function(sdy, runsDF, baseUrl, folderPath = "/Studies/"){
   print(paste0("working on study: ", sdy))
 
   # get file basenames present on server
@@ -235,11 +235,11 @@ updateEMs <- function(sdy, runsDF, folderPath = "/Studies/"){
     prbEM <- fread(file.path(dirPath, paste0(nm, ".tsv")))
     annoSetId <- runsDF$featureset[ runsDF$name == nm ]
     currFAS <- data.table(labkey.selectRows(baseUrl = baseUrl,
-                                                   folderPath = "/Studies/",
-                                                   schemaName = "microarray",
-                                                   queryName = "FeatureAnnotationSet",
-                                                   colNameOpt = "fieldname",
-                                                   showHidden = TRUE ))
+                                            folderPath = "/Studies/",
+                                            schemaName = "microarray",
+                                            queryName = "FeatureAnnotationSet",
+                                            colNameOpt = "fieldname",
+                                            showHidden = TRUE ))
     currAnnoNm <- currFAS$Name[ currFAS$RowId == annoSetId]
 
     # Handle possibility that _orig anno was used to create mx (e.g. annotation
@@ -288,6 +288,7 @@ updateEMs <- function(sdy, runsDF, folderPath = "/Studies/"){
 updateGEAR <- function(sdy, baseUrl){
 
   # NOT designed for use in HIPC-ISx studies!
+  print(paste0("Working on Study: ", sdy))
 
   # can't use CreateConnection() b/c lup/lub not in global env
   # since being run within a function
@@ -564,7 +565,7 @@ quickEMUpdate <- function(studies, onTest = TRUE){
                               colNameOpt = "rname")
 
   # update flat files for summary only
-  lapply(studies, updateEMs, runsDF = runsDF, folderPath = "/Studies/")
+  lapply(studies, updateEMs, runsDF = runsDF, baseUrl = baseUrl, folderPath = "/Studies/")
 }
 
 # Use to update a few Feature Annotation Sets
