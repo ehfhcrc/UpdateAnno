@@ -13,14 +13,12 @@ GEOquery::gunzip(fl)
 # read in orig raw counts file
 df <- data.table::fread(gsub("\\.gz","",fl), header = TRUE)
 
-# Remove unmapped
+# Remove unmapped if necessary
 res <- data.frame(Probe_ID = df$gene_symbol,
                   Gene_Symbol = df$gene_symbol,
                   stringsAsFactors = F)
 res <- res[ !is.na(res$Gene_Symbol), ]
-res <- res[ !duplicated(res$Probe_ID), ] # there were two
-
-# Note: there are likely misnamed probes still in res, e.g. "10-Mar" is likely a forced datetime
+res <- res[ !duplicated(res$Probe_ID), ]
 
 # Write out
 write.table(res,
