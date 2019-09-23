@@ -21,7 +21,19 @@ res <- res[ !duplicated(res$Probe_ID), ]
 
 # Write out
 write.table(res,
-            file = "FeatureAnnotationSetDev/Ensembl_86_GRCh38_customAnno.tsv",
+            file = "FeatureAnnotationSetDev/Ensembl_86_GRCh38.tsv",
+            quote = FALSE,
+            sep = "\t",
+            row.names = FALSE)
+
+# to update gene_symbols
+res$Gene_Symbol <- UpdateAnno::updateAnno(res$Gene_Symbol)
+res <- res[ !is.na(res$Gene_Symbol) & res$Gene_Symbol != "", ]
+res <- res[ !duplicated(res$Probe_ID), ]
+
+# Write out latest
+write.table(res,
+            file = "FeatureAnnotationSetDev/Ensembl_86_GRCh38_updated.tsv",
             quote = FALSE,
             sep = "\t",
             row.names = FALSE)
