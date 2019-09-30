@@ -14,7 +14,7 @@ ens2gene <- getBM(attributes=c('ensembl_gene_id','hgnc_symbol'),
 # Remove unmapped and duplicated probe ids
 res <- data.frame(Probe_ID = ens2gene$ensembl_gene_id,
                   Gene_Symbol = ens2gene$hgnc_symbol,
-                  stringsAsFactors = F)
+                  stringsAsFactors = FALSE)
 res <- res[ !is.na(res$Gene_Symbol), ]
 res <- res[ !duplicated(res$Probe_ID), ]
 

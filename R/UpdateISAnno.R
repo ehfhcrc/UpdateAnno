@@ -287,7 +287,7 @@ updateGEAR <- function(sdy, baseUrl){
 
   # NOT designed for use in HIPC-ISx studies!
   print(paste0("Working on Study: ", sdy))
-
+  
   # can't use CreateConnection() b/c lup/lub not in global env
   # since being run within a function
   con <- CreateConnection(study = sdy, onTest = grepl("test", baseUrl))
@@ -334,14 +334,10 @@ updateGEAR <- function(sdy, baseUrl){
     mm <- model.matrix(formula("~participant_id + coef"), pd)
 
     if(dim(mm)[[1]] > dim(mm)[[2]]){
-      # Check if it's non-normalized and use na.rm = T b/c currently allowing NAs to remain
-      # in matrices in pipeline unless normalization doesn't work (e.g. DEseq)
-      if (max(Biobase::exprs(ES), na.rm = TRUE) > 100) {
-        EM <- voom(ES)
-      }else{
-        EM <- ES
-      }
-      fit <- lmFit(EM, mm)
+      # NOTE:  ES is the normalized expressionset
+      
+      # TODO:  add more notes here and on notion
+      fit <- lmFit(ES, mm)
       fit <- tryCatch(
         eBayes(fit),
         error = function(e) return(e)
@@ -357,8 +353,9 @@ updateGEAR <- function(sdy, baseUrl){
       cm <- unique( cm[, list(cohort, arm_accession)] )
       coefs <- grep("^coef", colnames(mm), value = TRUE)
 
-      # create cohort_type identifier so unique to runs, which are cohort * cell_type
+      # subset GEF to match run samples
       gefSub <- gef[ gef$biosample_accession %in% pd$biosample_accession, ]
+      # create cohort_type identifier so unique to runs, which are cohort * cell_type
       cohort_type <- unique(paste(gefSub$cohort, gefSub$type, sep = "_"))
 
       for(coef in coefs){
@@ -403,7 +400,7 @@ updateGEAR <- function(sdy, baseUrl){
     }
   }
 
-  if( length(GEA_list) > 0 ){
+    if( length(GEA_list) > 0 ){
     # Set HTTP call vars
     folderPath <- con$config$labkey.url.path # must be sdy-specific
     schemaGE <- "gene_expression"
@@ -483,11 +480,22 @@ updateGEAR <- function(sdy, baseUrl){
                c("FeatureId", "gene_symbol", "adj.P.Val", "AveExpr", "logFC", "P.Value", "t"),
                c("feature_id", "gene_symbol", "adj_p_val", "ave_expr", "log_fc", "p_value", "statistic"))
       toImport <- data.frame(GEAR, stringsAsFactors = F)
-      resGEAR <- labkey.importRows(baseUrl = baseUrl,
-                                   folderPath = folderPath,
-                                   schemaName = schemaGE,
-                                   queryName = queryRes,
-                                   toImport = toImport)
+      
+      # Load in chunks of 50000 rows 
+      message("importing ", nrow(toImport), " rows to GEAR table...")
+      toImportList <- vector("list", round(nrow(toImport)/50000))
+      toImportList <- lapply(seq_along(toImportList), function(i) {
+        return(toImport[((i*50000)-49999):min(i*50000, nrow(toImport)),])
+      })
+      resGEARList <- lapply(toImportList, function(toImport) {
+        resGEAR <- labkey.importRows(baseUrl = baseUrl,
+                                     folderPath = folderPath,
+                                     schemaName = schemaGE,
+                                     queryName = queryRes,
+                                     toImport = toImport)
+        return(resGEAR)
+      })
+
     }
   }
   return(newGEA)
