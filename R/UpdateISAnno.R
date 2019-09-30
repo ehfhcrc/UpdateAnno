@@ -483,7 +483,7 @@ updateGEAR <- function(sdy, baseUrl){
       
       # Load in chunks of 50000 rows 
       message("importing ", nrow(toImport), " rows to GEAR table...")
-      toImportList <- vector("list", round(nrow(toImport)/50000))
+      toImportList <- vector("list", ceiling(nrow(toImport)/50000))
       toImportList <- lapply(seq_along(toImportList), function(i) {
         return(toImport[((i*50000)-49999):min(i*50000, nrow(toImport)),])
       })
