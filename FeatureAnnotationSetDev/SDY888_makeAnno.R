@@ -10,15 +10,15 @@ library(data.table)
 # get the raw file on the GSE record
 link <- "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE97861&format=file&file=GSE97861%5FRaw%5Fcounts%5Fcohort1%2Etsv%2Egz"
 gzfl <- tempfile()
-GET(link, write_disk(gzfl, overwrite=TRUE))
+GET(link, write_disk(gzfl, overwrite = TRUE))
 fl <- tempfile()
 GEOquery::gunzip(filename = gzfl, destname = fl, overwrite = TRUE)
 raw <- fread(fl)
 
 # Create anno df
 anno <- data.table(Probe_ID = raw$GENES,
-                  Gene_Symbol = raw$GENES,
-                  stringsAsFactors = F)
+                   Gene_Symbol = raw$GENES,
+                   stringsAsFactors = FALSE)
 
 # Write out
 write.table(anno,
