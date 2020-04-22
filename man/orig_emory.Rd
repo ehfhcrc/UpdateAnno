@@ -4,10 +4,15 @@
 \name{orig_emory}
 \alias{orig_emory}
 \title{Blood transcriptome modules}
-\format{A \code{list} of \code{character} of length 346, with one element per
-module}
+\format{
+A \code{list} of \code{character} of length 346, with one element per
+module
+}
 \usage{
 data(orig_emory)
+}
+\description{
+Blood transcriptome modules
 }
 \references{
 http://www.immuneprofiling.org/meni/meni-paper/btm-landing.gsp

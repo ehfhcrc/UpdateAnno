@@ -4,8 +4,10 @@
 \name{orig_chaussabel}
 \alias{orig_chaussabel}
 \title{Modules from Chaussabel (2008)}
-\format{A \code{list} of \code{character} of length 260, with one element per
-module.}
+\format{
+A \code{list} of \code{character} of length 260, with one element per
+module.
+}
 \usage{
 data(orig_chaussabel)
 }

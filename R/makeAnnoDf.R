@@ -1,7 +1,6 @@
 #' Function to map probe ids to gene symbols from an annotation package
 #'
-#' @param probes character vector of probe ids
-#' @param annoPks name of annotation package to use
+#' @param annoPkg name of annotation package to use
 #' @param outPath file path for tsv to write out for upload to ImmuneSpace
 #' @export
 #'

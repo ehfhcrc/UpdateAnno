@@ -4,12 +4,14 @@
 \name{orig_btm_list}
 \alias{orig_btm_list}
 \title{Original HIPC BTM list}
-\format{A list of lists with charactar vector elements
+\format{
+A list of lists with charactar vector elements
 \describe{
   \item{names}{geneSet pathway names}
   \item{elements}{character vector of gene symbols}
   ...
-}}
+}
+}
 \usage{
 orig_btm_list
 }

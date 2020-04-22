@@ -7,11 +7,9 @@
 makeAnnoDf(annoPkg, outPath = NULL)
 }
 \arguments{
+\item{annoPkg}{name of annotation package to use}
+
 \item{outPath}{file path for tsv to write out for upload to ImmuneSpace}
-
-\item{probes}{character vector of probe ids}
-
-\item{annoPks}{name of annotation package to use}
 }
 \description{
 Function to map probe ids to gene symbols from an annotation package

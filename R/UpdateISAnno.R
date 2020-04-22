@@ -17,7 +17,6 @@
 # library(UpdateAnno)
 # library(data.table)
 # library(Rlabkey)
-# library(org.Hs.eg.db)
 # library(ImmuneSpaceR)
 # library(limma)
 # library(Biobase)
@@ -26,7 +25,6 @@
 # NOTE: Main Script @ bottom of page
 #' @import Rlabkey
 #' @import data.table
-#' @import org.Hs.eg.db
 #' @import ImmuneSpaceR
 #' @import limma
 #' @import Biobase
@@ -60,7 +58,7 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
                                   schemaName = schemaName,
                                   sql = fasQuery,
                                   colNameOpt = "fieldname",
-                                  showHidden = T)
+                                  showHidden = TRUE)
     toDrop <- c("Created", "CreatedBy", "Modified", "ModifiedBy")
     features <- features[ , !(colnames(features) %in% toDrop) ]
   }
@@ -83,7 +81,7 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
 
   if (is.null(fasNms)) {
     fasNms <- currFAS$Name[ grep("[N|n]o[n|t|][-| ][u|U]pdat[e|able]",
-                                 currFAS$Comment, invert = T) ]
+                                 currFAS$Comment, invert = TRUE) ]
   }
 
   lapply(fasNms, FUN = function(nm){
@@ -96,11 +94,13 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
       # if orig is present means that update has been performed at least once.
       # Update the rows of the previously updated anno using the orig
       # as the base for mapping to ensure that updates of updates are avoided
+      # and the correct rowIds remain.
       orAnno <- getAnno(orNm, currFAS, baseUrl)
-      orAnno$GeneSymbol <- updateAnno(orAnno$GeneSymbol)
+      orAnno$GeneSymbol <- gsub("---", "", orAnno$GeneSymbol)
+      orAnno$GeneSymbol <- mapAlias2Symbol(orAnno$GeneSymbol)
       currAnno$GeneSymbol <- orAnno$GeneSymbol[ match(currAnno$FeatureId, orAnno$FeatureId) ]
       currAnno[ is.na(currAnno) ] <- ""
-      toUpdate <- data.frame(currAnno, stringsAsFactors = F)
+      toUpdate <- data.frame(currAnno, stringsAsFactors = FALSE)
       done <- labkey.updateRows(baseUrl = baseUrl,
                                 folderPath = folderPath,
                                 schemaName = schemaName,
@@ -129,7 +129,7 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
       orAnno <- currAnno[ , !(colnames(currAnno) == "RowId") ]
       orAnno$FeatureAnnotationSetId <- nowFas$RowId[ nowFas$Name == toImport$Name[[1]] ]
       orAnno[ is.na(orAnno) ] <- ""
-      toImport <- data.frame(orAnno, stringsAsFactors = F)
+      toImport <- data.frame(orAnno, stringsAsFactors = FALSE)
       addFeatures <- labkey.importRows(baseUrl = baseUrl,
                                        folderPath = folderPath,
                                        schemaName = schemaName,
@@ -158,7 +158,7 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
         # Now update the old fasId rows with new geneSymbols
         currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
         currAnno[ is.na(currAnno) ] <- ""
-        FAUpdate <- data.frame(currAnno, stringsAsFactors = F)
+        FAUpdate <- data.frame(currAnno, stringsAsFactors = FALSE)
         FAdone <- labkey.updateRows(baseUrl = baseUrl,
                                     folderPath = folderPath,
                                     schemaName = schemaName,
@@ -171,9 +171,9 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
     }
 
     # Update FAS$comment to be packageVersion of org.Hs.eg.db
-    updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = F)
-    updateFAS$Comment <- paste0("Alias2Symbol mapping with org.Hs.eg.db version: ",
-                                UpdateAnno::orgHsEgDb_version)
+    updateFAS <- data.frame(currFAS[ currFAS$Name == nm, ], stringsAsFactors = FALSE)
+    updateFAS$Comment <- paste0("Alias2Symbol mapping with HGNC dataset from: ",
+                                UpdateAnno::hgncAlias2Symbol_version)
     FASdone <- labkey.updateRows(baseUrl = baseUrl,
                                  folderPath = folderPath,
                                  schemaName = schemaName,
@@ -551,7 +551,7 @@ runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
   sdys <- unique(runsDF$folder_name)
 
   # update flat files for summary only
-  lapply(sdys, updateEMs, runsDF = runsDF, folderPath = folderPath)
+  lapply(sdys, updateEMs, runsDF = runsDF, baseUrl = baseUrl, folderPath = folderPath)
 
   # using con$getGEMatrix(outputType = "normalized", annotation = "latest")
   dmp <- lapply(sdys, updateGEAR, baseUrl = baseUrl)

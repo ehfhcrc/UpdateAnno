@@ -4,8 +4,10 @@
 \name{msigdb_immunologic_signatures}
 \alias{msigdb_immunologic_signatures}
 \title{Immunologic signatures}
-\format{A \code{list} of \code{character} of length 1910, with one element
-per module.}
+\format{
+A \code{list} of \code{character} of length 1910, with one element
+per module.
+}
 \usage{
 data(msigdb_immunologic_signatures)
 }
@@ -17,7 +19,7 @@ relevant classes were made and genes ranked by mutual information. Gene sets
 correspond to top or bottom genes (FDR < 0.25 or maximum of 200 genes) for
 each comparison. This resource is generated as part of the Human Immunology
 Project Consortium (HIPC; http://www.immuneprofiling.org/). NOTE: Gene Symbols
-are updated by the upDateAnnoGMT.Rmd when it is run.  Original is kept as
+are updated by the updateDataWithLatestHGNCMap.Rmd when it is run.  Original is kept as
 orig_msigdb.
 }
 \references{
