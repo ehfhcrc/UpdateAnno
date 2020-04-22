@@ -1,15 +1,11 @@
 Package: UpdateAnno
 Type: Package
-Title: Update Annotation to Latest Symbols using org.Hs.eq.db
-Version: 3.6.0
+Title: Update Annotation to Latest Symbols using HGNC datasets
+Version: 3.7.0
 Author: Evan Henrich
 Maintainer: Evan Henrich <ehenrich@fredhutch.org>
-Description: Starting with the original list of gene sets from 2013,
-    called "orig_btm" in the package's data objects, the vignette 
-    automatically re-installs org.Hs.eq.db and updates the other data
-    object - "updated_btm". This gives other scripts easy access to 
-    the latest gene symbols every time the package is re-installed. Note:
-    the package version for `UpdateAnno` matches `org.Hs.eq.db`.
+Description: This package maintains tools and data used to update gene alias or probe to symbol mapping
+  throughout the ImmuneSpace web application.
 License: Unlicensed
 Encoding: UTF-8
 LazyData: true
@@ -25,7 +21,6 @@ Imports: plyr,
     ImmuneSpaceR,
     gtools,
     limma,
-    Biobase,
-    org.Hs.eg.db
+    Biobase
 VignetteBuilder: knitr
-RoxygenNote: 6.0.1
+RoxygenNote: 7.1.0

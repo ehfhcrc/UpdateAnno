@@ -4,13 +4,15 @@
 \name{chaussabel_modules}
 \alias{chaussabel_modules}
 \title{Modules from Chaussabel (2008)}
-\format{A \code{list} of \code{character} of length 260, with one element per
-module.}
+\format{
+A \code{list} of \code{character} of length 260, with one element per
+module.
+}
 \usage{
 data(chaussabel_modules)
 }
 \description{
-Repertoire of co-clustering genes. NOTE: Gene Symbols are updated by the upDateAnnoGMT.Rmd
+Repertoire of co-clustering genes. NOTE: Gene Symbols are updated by the updateDataWithLatestHGNCMap.Rmd
 when it is run.  Original is kept as orig_chaussabel.
 }
 \references{

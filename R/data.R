@@ -16,7 +16,7 @@
 #'
 #' A dataset containing the geneSet pathways and geneIds for
 #' a BTM file that is updated using the most recent version of
-#' the org.Hs.eq.db package each time the UpdateAnno package is
+#' the HGNC database each time the UpdateAnno package is
 #' re-installed with build_vignette = TRUE.
 #'
 #' @format A list of lists with charactar vector elements
@@ -52,7 +52,7 @@
 #' correspond to top or bottom genes (FDR < 0.25 or maximum of 200 genes) for
 #' each comparison. This resource is generated as part of the Human Immunology
 #' Project Consortium (HIPC; http://www.immuneprofiling.org/). NOTE: Gene Symbols
-#' are updated by the upDateAnnoGMT.Rmd when it is run.  Original is kept as
+#' are updated by the updateDataWithLatestHGNCMap.Rmd when it is run.  Original is kept as
 #' orig_msigdb.
 #'
 #' @usage data(msigdb_immunologic_signatures)
@@ -64,7 +64,7 @@
 
 #' @name emory_blood_transcript_modules
 #' @title Blood transcriptome modules
-#' @description NOTE: Gene Symbols are updated by the upDateAnnoGMT.Rmd when it is run.
+#' @description NOTE: Gene Symbols are updated by the updateDataWithLatestHGNCMap.Rmd when it is run.
 #' Original is kept as orig_emory.
 #'
 #' @usage data(emory_blood_transcript_modules)
@@ -80,7 +80,7 @@
 #' @title Modules from Chaussabel (2008)
 #'
 #' @description
-#' Repertoire of co-clustering genes. NOTE: Gene Symbols are updated by the upDateAnnoGMT.Rmd
+#' Repertoire of co-clustering genes. NOTE: Gene Symbols are updated by the updateDataWithLatestHGNCMap.Rmd
 #' when it is run.  Original is kept as orig_chaussabel.
 #'
 #' @usage data(chaussabel_modules)
@@ -138,14 +138,26 @@
 #'  http://www.nature.com/nri/journal/v14/n4/full/nri3642.html
 "orig_chaussabel"
 
-#' org.Hs.eg.db packageVersion
+#' HGNC alias2symbol mapping table
 #'
-#' packageVersion of org.Hs.eg.db used to update gene symbols. Pushed
+#' data.table holding mapping of gene aliases to symbol
+#'
+#' @format data.table
+#' \describe{
+#'   \item{SYMBOL}{Gene Symbol}
+#'   \item{ALIAS}{Previous or current gene aliases}
+#'   ...
+#' }
+"hgncAlias2Symbol"
+
+#' HGNC dataset version
+#'
+#' Date HGNC dataset was used to update gene symbols. Pushed
 #' to microarray.FeatureAnnotationSet.
 #'
 #' @format string
 #' \describe{
-#'   \item{value}{packageVersion of org.Hs.eg.db used in updates}
+#'   \item{value}{date when HGNC dataset was downloaded and used in updates}
 #'   ...
 #' }
-"orgHsEgDb_version"
+"hgncAlias2Symbol_version"

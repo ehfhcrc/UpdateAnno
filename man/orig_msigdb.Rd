@@ -4,8 +4,10 @@
 \name{orig_msigdb}
 \alias{orig_msigdb}
 \title{Immunologic signatures}
-\format{A \code{list} of \code{character} of length 1910, with one element
-per module.}
+\format{
+A \code{list} of \code{character} of length 1910, with one element
+per module.
+}
 \usage{
 data(orig_msigdb)
 }

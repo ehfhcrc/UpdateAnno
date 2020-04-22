@@ -4,12 +4,14 @@
 \name{updated_btm_df}
 \alias{updated_btm_df}
 \title{Updated HIPC BTM data frame}
-\format{A dataframe with pathways and geneIds
+\format{
+A dataframe with pathways and geneIds
 \describe{
   \item{pathway}{geneSet pathway names}
   \item{SYMBOL}{updated gene symbols}
   ...
-}}
+}
+}
 \usage{
 updated_btm_df
 }

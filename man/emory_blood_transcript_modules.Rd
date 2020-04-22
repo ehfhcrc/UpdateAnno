@@ -4,13 +4,15 @@
 \name{emory_blood_transcript_modules}
 \alias{emory_blood_transcript_modules}
 \title{Blood transcriptome modules}
-\format{A \code{list} of \code{character} of length 346, with one element per
-module}
+\format{
+A \code{list} of \code{character} of length 346, with one element per
+module
+}
 \usage{
 data(emory_blood_transcript_modules)
 }
 \description{
-NOTE: Gene Symbols are updated by the upDateAnnoGMT.Rmd when it is run.
+NOTE: Gene Symbols are updated by the updateDataWithLatestHGNCMap.Rmd when it is run.
 Original is kept as orig_emory.
 }
 \references{

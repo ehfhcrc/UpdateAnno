@@ -1,0 +1,95 @@
+---
+title: "Updating internal data objects with latest HGNC annotation"
+author: "Evan Henrich <ehenrich@fredhutch.org>"
+date: "`r Sys.Date()`"
+output: rmarkdown::html
+---
+
+```{r dependencies}
+library(UpdateAnno) # Get orig btm data
+library(jsonlite)
+library(data.table)
+library(usethis)
+library(GSEABase)
+```
+
+```{r, create-alias2symbol-map-using-hgnc}
+url <- "ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/json/hgnc_complete_set.json"
+fl <- tempfile()
+download.file(url, fl)
+
+tmp <- jsonlite::fromJSON(fl)
+data <- data.table(tmp$response$docs)
+data <- data[ , list(symbol, alias_symbol, prev_symbol)]
+
+# add rows for all previous and current aliases
+data <- apply(data, 1, function(x){
+  aliases <- c(unlist(x$alias_symbol), unlist(x$prev_symbol), x$symbol)
+  newRows <- data.table(SYMBOL = x$symbol,
+                        ALIAS = aliases)
+  
+})
+data <- rbindlist(data)
+setorder(data, "SYMBOL")
+hgncAlias2Symbol <- copy(data)
+usethis::use_data(hgncAlias2Symbol, overwrite = TRUE)
+```
+
+```{r setup-names}
+origMods <- c("orig_btm_list",
+              "orig_chaussabel",
+              "orig_emory",
+              "orig_msigdb")
+
+names(origMods) <- c("updated_btm_list",
+                     "chaussabel_modules",
+                     "emory_blood_transcript_modules",
+                     "msigdb_immunologic_signatures")
+```
+
+```{r helper-fn}
+updateModuleSymbols <- function(module, hgncAlias2Symbol){
+  
+  # read in as DT
+  modList <- get(module)
+  modDT <- rbindlist(lapply(modList, data.table), idcol = "module")
+  setnames(modDT, "V1", "ALIAS")
+  
+  # update gene symbols
+  modDT[hgncAlias2Symbol, SYMBOL := SYMBOL, on = c(ALIAS = "ALIAS")]
+  setnames(modDT, "module", "pathway")
+  modDT[, ALIAS := NULL]
+  modDT <- modDT[ !is.na(modDT$SYMBOL) ]
+  modDT <- unique(modDT) # MUST DE-DUPE so that gmt file can be created, checked by GeneSet()
+  
+  # save with correct name
+  upMod <- plyr::dlply(modDT, 1, function(x){ x$SYMBOL }) # convert to list of lists
+  
+  # if the official btm then save the df as well
+  # use_data doesn't interpret the object name
+  if(module == "orig_btm_list"){
+    updated_btm_list <- upMod
+    usethis::use_data(updated_btm_list, overwrite = TRUE)
+    updated_btm_df <- modDT
+    usethis::use_data(updated_btm_df, overwrite = TRUE)
+  }else if( module == "orig_chaussabel"){
+    chaussabel_modules <- upMod
+    usethis::use_data(chaussabel_modules, overwrite = TRUE)
+  }else if( module == "orig_emory"){
+    emory_blood_transcript_modules <- upMod
+    usethis::use_data(emory_blood_transcript_modules, overwrite = TRUE)
+  }else if( module == "orig_msigdb"){
+    msigdb_immunologic_signatures <- upMod
+    usethis::use_data(msigdb_immunologic_signatures, overwrite = TRUE)
+  }
+}
+```
+
+```{r update-modules}
+lapply(origMods, updateModuleSymbols, hgncAlias2Symbol = hgncAlias2Symbol)
+```
+
+```{r save-pkgVersion}
+hgncAlias2Symbol_version <- Sys.Date()
+usethis::use_data(hgncAlias2Symbol_version, overwrite = TRUE)
+```
