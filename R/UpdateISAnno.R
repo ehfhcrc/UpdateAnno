@@ -551,7 +551,7 @@ runUpdateAnno <- function(ISserver, folderPath = "/Studies/"){
   sdys <- unique(runsDF$folder_name)
 
   # update flat files for summary only
-  lapply(sdys, updateEMs, runsDF = runsDF, folderPath = folderPath)
+  lapply(sdys, updateEMs, runsDF = runsDF, baseUrl = baseUrl, folderPath = folderPath)
 
   # using con$getGEMatrix(outputType = "normalized", annotation = "latest")
   dmp <- lapply(sdys, updateGEAR, baseUrl = baseUrl)
