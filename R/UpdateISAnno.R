@@ -156,7 +156,7 @@ updateFAS <- function(baseUrl, folderPath = "/Studies/", fasNms = NULL){
 
       if( all.equal(featureChk, imported) ){
         # Now update the old fasId rows with new geneSymbols
-        currAnno$GeneSymbol <- updateAnno(currAnno$GeneSymbol)
+        currAnno$GeneSymbol <- mapAlias2Symbol(currAnno$GeneSymbol)
         currAnno[ is.na(currAnno) ] <- ""
         FAUpdate <- data.frame(currAnno, stringsAsFactors = FALSE)
         FAdone <- labkey.updateRows(baseUrl = baseUrl,
