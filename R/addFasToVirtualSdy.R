@@ -8,7 +8,7 @@
 #'
 
 # Main Method
-addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL){
+addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL, verbose = FALSE){
 
     # Convert server to baseUrl
     baseUrl <- ifelse( ISserver == "prod",
@@ -89,4 +89,25 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL){
                                 schemaName = "microarray",
                                 queryName = "FeatureAnnotation",
                                 toImport = newFa)
+    
+    # Importing > 100k rows bogs down, so do subsets
+    numCuts <- ceiling(nrow(newFa)/100000)
+    for(i in 1:numCuts){
+      low <- 100000 * (i-1) + 1
+      high <- 100000 * i
+      if(high > nrow(newFa)){
+        high <- nrow(newFa)
+      }
+      
+      if(verbose){
+        print(paste0("low: ", low, " high: ", high))
+      }
+      
+      tmp <- newFa[low:high,]
+      doneFa <- labkey.importRows(baseUrl = baseUrl,
+                                  folderPath = vSdyPath,
+                                  schemaName = "microarray",
+                                  queryName = "FeatureAnnotation",
+                                  toImport = tmp)
+    }
 }
