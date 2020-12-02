@@ -3,6 +3,7 @@
 #' @param ISserver immunespace server, either test or prod
 #' @param virtualSdy subdirectory within HIPC container
 #' @param fasGrep grep statement to use in subsetting FAS to add just a few new sets
+#' @param verbose prints name of FAS being copied
 #' @import Rlabkey
 #' @export
 #'
