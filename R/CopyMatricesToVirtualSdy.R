@@ -8,6 +8,8 @@
 
 # Main Method
 copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
+  # Note: This should be run as the immunespace unix user on the RServe EC2 instance
+  
   baseUrl <- ifelse( ISserver == "prod",
                      "https://www.immunespace.org",
                      "https://test.immunespace.org")
@@ -20,7 +22,7 @@ copyMatricesToVirtualSdy <- function(ISserver, virtualSdy){
 
   # subset to those in vSdy
   vSdyList <- list()
-  vSdyList[["IS2"]] <- c("SDY56, SDY61, SDY63, SDY67, SDY80, SDY180, SDY212, SDY224, SDY269, SDY270, SDY400, SDY404, SDY520, SDY984, SDY1260, SDY1264, SDY1276, SDY1289, SDY1291, SDY1293, SDY1325, SDY1364, SDY1373")
+  vSdyList[["IS2"]] <- c("SDY56, SDY61, SDY63, SDY67, SDY80, SDY180, SDY212, SDY224, SDY269, SDY270, SDY400, SDY404, SDY520, SDY640, SDY984, SDY1119, SDY1260, SDY1264, SDY1276, SDY1289, SDY1291, SDY1293, SDY1294, SDY1325, SDY1328, SDY1364, SDY1368, SDY1370, SDY1373, SDY1529")
   vSdyList[["IS1"]]  <- c("SDY63, SDY67, SDY80, SDY212, SDY400, SDY404")
   studies <- vSdyList[[virtualSdy]]
   studies <- strsplit(studies, ", ")[[1]]
