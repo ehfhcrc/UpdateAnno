@@ -25,14 +25,14 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL, verbose = 
                              schemaName = "microarray",
                              queryName = "FeatureAnnotationSet",
                              colNameOpt = "fieldname",
-                             showHidden = T)
+                             showHidden = TRUE)
     if (!is.null(fasGrep)) {
       fas <- fas[ grep(fasGrep, fas$Name), ]
     }
     fas <- fas[ order(fas$RowId), ]
-    toImport <- data.frame(fas, stringsAsFactors = F)
+    toImport <- data.frame(fas, stringsAsFactors = FALSE)
     toImport[is.na(toImport)] <- ""
-    toImport <- toImport[ grep("RowId", colnames(toImport), invert = T)]
+    toImport <- toImport[ grep("RowId", colnames(toImport), invert = TRUE)]
 
     # Get container ID
     container <- labkey.selectRows(baseUrl = baseUrl,
@@ -56,7 +56,7 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL, verbose = 
                                 schemaName = "microarray",
                                 queryName = "FeatureAnnotationSet",
                                 colNameOpt = "fieldname",
-                                showHidden = T)
+                                showHidden = TRUE)
     if (!is.null(fasGrep)) {
       newFas <- newFas[ grep(fasGrep, newFas$Name), ]
     }
@@ -68,7 +68,7 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL, verbose = 
 
     rowMap <- data.frame(old = fas$RowId,
                          new = newFas$RowId,
-                         stringsAsFactors = F)
+                         stringsAsFactors = FALSE)
 
     # Update the featureAnnotation and Import
     # NOTE: colSelect "all" option aka "*" used in order to get FASid
@@ -80,19 +80,18 @@ addAnnoToVirtualSdy <- function(ISserver, virtualSdy, fasGrep = NULL, verbose = 
                             colNameOpt = "fieldname",
                             colSelect = "*",
                             colFilter = fasIdFilt,
-                            showHidden = T)
+                            showHidden = TRUE)
     newFa <- fa[ , colnames(fa) %in% c("Container","FeatureAnnotationSetId", "FeatureId", "GeneSymbol")]
     newFa$Container <- unique(toImport$Container)
     newFa$FeatureAnnotationSetId <- rowMap$new[ match(newFa$FeatureAnnotationSetId, rowMap$old)]
     newFa[is.na(newFa)] <- ""
-    doneFa <- labkey.importRows(baseUrl = baseUrl,
-                                folderPath = vSdyPath,
-                                schemaName = "microarray",
-                                queryName = "FeatureAnnotation",
-                                toImport = newFa)
     
     # Importing > 100k rows bogs down, so do subsets
     numCuts <- ceiling(nrow(newFa)/100000)
+    if(verbose){
+      print(paste("Total Rows to Import:", nrow(newFa)))
+    }
+    
     for(i in 1:numCuts){
       low <- 100000 * (i-1) + 1
       high <- 100000 * i
