@@ -20,17 +20,50 @@ download.file(url, fl)
 
 tmp <- jsonlite::fromJSON(fl)
 data <- data.table(tmp$response$docs)
-data <- data[ , list(symbol, alias_symbol, prev_symbol)]
+data <- data[ , list(symbol, alias_symbol, prev_symbol, hgnc_id, entrez_id)]
 
 # add rows for all previous and current aliases
 data <- apply(data, 1, function(x){
   aliases <- c(unlist(x$alias_symbol), unlist(x$prev_symbol), x$symbol)
   newRows <- data.table(SYMBOL = x$symbol,
-                        ALIAS = aliases)
+                        ALIAS = aliases,
+                        HGNC = as.numeric(gsub("HGNC:", "", x$hgnc_id)),
+                        ENTREZ = x$entrez_id)
   
 })
 data <- rbindlist(data)
 setorder(data, "SYMBOL")
+data <- data[ !duplicated(data) ]
+
+# Handle genes with entries both as an alias and as a symbol 
+# by removing mappings to other mappings and maintaining the 'symbol' observation
+# based on the premise that mappings to other symbols are a historic artifact.
+# This represents approximately 0.7% of all aliases as of 12/2020
+selfMap <- data[ ALIAS == SYMBOL ]
+otherMap <- data[ ALIAS != SYMBOL ]
+overlap <- intersect(selfMap$ALIAS, otherMap$ALIAS)
+toRemove <- which(data$ALIAS %in% overlap & data$ALIAS != data$SYMBOL)
+data <- data[ !toRemove ]
+
+# Some aliases still map to multiple symbols
+# Select the higher HGNC ID based on the premise
+# that is this work was reviewed most recently
+# This represents approximately 1.3% of all aliases as of 12/2020
+multiMapped <- table(data$ALIAS)
+multiMapped <- multiMapped[ multiMapped > 1 ]
+mmData <- data[ ALIAS %in% names(multiMapped), ]
+for(alias in unique(mmData$ALIAS)){
+  sub <- data[ALIAS == alias]
+  if(nrow(sub) > 0){ # sometimes previous removals negate need
+    rowsToRm <- which(data$ALIAS == alias & data$HGNC != max(sub$HGNC))
+    data <- data[-rowsToRm]
+  }
+}
+
+if(length(unique(data$ALIAS)) != nrow(data)){
+  stop("There are multi-mappings of alias to symbol. Must correct and re-run!")
+}
+
 hgncAlias2Symbol <- copy(data)
 usethis::use_data(hgncAlias2Symbol, overwrite = TRUE)
 ```
