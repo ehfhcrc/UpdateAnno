@@ -11,6 +11,10 @@ The `UpdateAnno` package is designed to ensure that the Gene Symbols used throug
 ## Inner Workings
 In the `data-raw` sub-directory, the `updateDataWithLatestHGNCMap.Rmd` Rmarkdown file is used to generate a data table from the latest HUGO Gene Nomenclature Committee dataset.  This resource is used instead of the NCBI database via biomaRt or the equivalent `org.Hs.eg.db` as those data sources contained mappings that were deemed incorrect (such as "ACTB" > "POTEF") during the ImmuneSignatures 2 project.
 
+However, there are two edge-cases that must be handled:
+1. An alias maps to itself as a symbol as well as other symbols.  In this case, we have selected to use the self-mapping and removed any other mappings.  Our rationale is that the other-mapping symbols are historic artifacts and no longer accurate.
+2. An alias maps to multiple symbols that do not include itself.  In this case, we select the symbol with the most recent HGNC_ID based on the rationale that the most recently added symbol is likely most accurate.
+
 ## Use
 To install with the vignette: 
 `devtools::install_github("RGLab/UpdateAnno")`
