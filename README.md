@@ -13,7 +13,7 @@ In the `data-raw` sub-directory, the `updateDataWithLatestHGNCMap.Rmd` Rmarkdown
 
 However, there are two edge-cases that must be handled:
 1. An alias maps to itself as a symbol as well as other symbols.  In this case, we have selected to use the self-mapping and removed any other mappings.  Our rationale is that the other-mapping symbols are historic artifacts and no longer accurate.
-2. An alias maps to multiple symbols that do not include itself.  In this case, we select the symbol with the most recent HGNC_ID based on the rationale that the most recently added symbol is likely most accurate.
+2. An alias maps to multiple symbols that do not include itself.  In this case, we drop these aliases from the matrix because we do not have a good way to know which symbol is the most accurate. 
 
 ## Use
 To install with the vignette: 
