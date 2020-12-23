@@ -1,7 +1,7 @@
 Package: UpdateAnno
 Type: Package
 Title: Update Annotation to Latest Symbols using HGNC datasets
-Version: 3.8.0
+Version: 3.9.0
 Author: Evan Henrich
 Maintainer: Evan Henrich <ehenrich@fredhutch.org>
 Description: This package maintains tools and data used to update gene alias or probe to symbol mapping
